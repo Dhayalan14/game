@@ -512,7 +512,13 @@ function connectToHost(hostId) {
             cleanup();
             console.log('Connected to host:', hostId);
             state.connections.set(hostId, conn);
+            state.hostId = hostId;
             resolve(conn);
+        });
+
+        // Handle incoming data from host
+        conn.on('data', (data) => {
+            handleMessage(data, conn);
         });
 
         conn.on('error', (err) => {
