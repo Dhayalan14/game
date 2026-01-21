@@ -1333,12 +1333,10 @@ input[type="text"]:focus {
     .game-main {
         grid-template-columns: 1fr;
         grid-template-rows: auto 1fr auto;
-        gap: 10px;
     }
 
     .player-sidebar {
         order: 1;
-        padding: 10px;
     }
 
     .canvas-area {
@@ -1347,36 +1345,17 @@ input[type="text"]:focus {
 
     .chat-area {
         order: 3;
-        min-height: 250px;
-        max-height: 300px;
-    }
-
-    .chat-messages {
-        min-height: 120px;
-        max-height: 150px;
+        max-height: 200px;
     }
 
     .game-players-list {
         flex-direction: row;
         flex-wrap: wrap;
-        gap: 5px;
     }
 
     .game-players-list li {
         flex: 1 1 auto;
-        min-width: 100px;
-        padding: 8px;
-        font-size: 0.85rem;
-    }
-
-    .game-header {
-        flex-wrap: wrap;
-        gap: 10px;
-        padding: 10px 15px;
-    }
-
-    .settings-grid {
-        grid-template-columns: repeat(2, 1fr);
+        min-width: 120px;
     }
 }
 
@@ -1385,187 +1364,16 @@ input[type="text"]:focus {
         font-size: 2.2rem;
     }
 
-    .tagline {
-        font-size: 0.9rem;
-    }
-
     #word-hint {
-        font-size: 1.1rem;
-        letter-spacing: 2px;
-    }
-
-    .word-display {
-        flex-direction: column;
-        gap: 5px;
+        font-size: 1.3rem;
+        letter-spacing: 3px;
     }
 
     .drawing-tools {
         flex-wrap: wrap;
-        gap: 10px;
-        padding: 10px;
-    }
-
-    .tool-group.colors {
-        gap: 8px;
-    }
-
-    .color-btn {
-        width: 32px;
-        height: 32px;
-    }
-
-    .game-container {
-        height: auto;
-        min-height: 100vh;
-        padding: 10px;
-    }
-
-    /* Smaller canvas on mobile */
-    .canvas-area {
-        max-height: 250px;
-    }
-
-    #drawing-canvas {
-        max-height: 200px;
-    }
-
-    /* Larger chat area */
-    .chat-area {
-        min-height: 200px;
-        flex: 1;
-    }
-
-    .chat-messages {
-        min-height: 100px;
-        font-size: 1rem;
-    }
-
-    .chat-input-container {
-        padding: 10px;
-    }
-
-    .chat-input-container input {
-        font-size: 16px;
-        padding: 12px;
-    }
-
-    .reactions {
-        padding: 8px;
-        gap: 8px;
-    }
-
-    .reaction-btn {
-        width: 36px;
-        height: 36px;
-        font-size: 1.1rem;
-    }
-
-    .timer-ring {
-        width: 50px;
-        height: 50px;
-    }
-
-    .timer-text {
-        font-size: 1rem;
-    }
-
-    .round-info {
-        align-items: center;
-    }
-
-    .round-label {
-        font-size: 0.8rem;
-    }
-
-    .round-number {
-        font-size: 1.1rem;
-    }
-
-    .room-code-display span {
-        font-size: 2rem;
-        letter-spacing: 5px;
-    }
-
-    .lobby-container .glass-card {
-        padding: 25px;
-    }
-
-    .settings-grid {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 12px;
-    }
-
-    .setting-item select {
-        padding: 12px;
-        font-size: 1rem;
-    }
-
-    .modal-content {
-        margin: 15px;
-        padding: 25px;
-    }
-
-    .overlay-content {
-        margin: 20px;
-        padding: 25px;
-    }
-
-    .btn {
-        padding: 14px 24px;
-        font-size: 1rem;
-    }
-}
-
-/* Extra small devices */
-@media (max-width: 400px) {
-    .logo h1 {
-        font-size: 2rem;
-    }
-
-    .logo-icon {
-        font-size: 3.5rem;
-    }
-
-    .btn {
-        padding: 14px 20px;
-        font-size: 1rem;
-    }
-
-    .game-header {
-        padding: 10px;
-    }
-
-    #word-hint {
-        font-size: 1.1rem;
-    }
-
-    .chat-area {
-        min-height: 180px;
-    }
-
-    .player-sidebar h3 {
-        font-size: 1rem;
     }
 
     .settings-grid {
         grid-template-columns: 1fr;
-    }
-}
-
-/* Landscape mobile */
-@media (max-height: 500px) and (orientation: landscape) {
-    .game-main {
-        grid-template-columns: 150px 1fr 200px;
-        grid-template-rows: 1fr;
-    }
-
-    .player-sidebar,
-    .chat-area {
-        max-height: calc(100vh - 100px);
-        overflow-y: auto;
-    }
-
-    .canvas-area {
-        max-height: calc(100vh - 100px);
     }
 }

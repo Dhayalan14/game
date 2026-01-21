@@ -42,6 +42,9 @@ const WORDS = {
 // ============================================
 // GAME STATE
 // ============================================
+// ============================================
+// GAME STATE
+// ============================================
 const state = {
     peer: null,
     connections: new Map(),
@@ -64,6 +67,7 @@ const state = {
     hintsPerRound: 1,
     hintsUsed: 0,
     timerInterval: null,
+    hintTimers: [], // Array to store hint timeout IDs
     timeLeft: 0,
     currentDrawerIndex: -1,
     guessedPlayers: new Set(),
@@ -637,6 +641,8 @@ function resetState() {
     state.hostId = null;
     state.canvasHistory = [];
     stopTimer();
+    state.hintTimers.forEach(timer => clearTimeout(timer));
+    state.hintTimers = [];
 }
 
 function connectToHost(hostId) {
@@ -797,6 +803,10 @@ function handleMessage(message, conn) {
         case 'player-disconnected':
             state.players = message.players;
             updatePlayersList();
+            if (state.gameStarted) {
+                const drawer = message.players[state.currentDrawerIndex]?.name;
+                updateGamePlayersList(drawer);
+            }
             addChatMessage(`${message.disconnectedPlayer} disconnected`, 'system');
             break;
 
