@@ -1828,26 +1828,45 @@ clearCanvas();
 window.selectWord = selectWord;
 
 // Check for existing session on page load
-window.addEventListener('load', () => {
+window.addEventListener('load', async () => {
     const session = localStorage.getItem('skribbl_session');
     if (session) {
         try {
             const { name, roomCode, id, color } = JSON.parse(session);
             if (name && roomCode) {
-                // Pre-fill inputs
+                // Pre-fill inputs in case auto-join fails
                 const nameInput = document.getElementById('player-name');
                 const codeInput = document.getElementById('room-code-input');
-                const joinBtn = document.getElementById('join-room-btn');
 
                 if (nameInput) nameInput.value = name;
                 if (codeInput) codeInput.value = roomCode;
 
                 // Restore state
-                state.playerId = id;
-                state.playerColor = color || '#6c5ce7'; // Default if missing
+                state.playerColor = color || '#6c5ce7';
 
-                // Auto-join removed as per request
-                showToast('Previous session found! Click Join to continue.', 'info');
+                // Attempt auto-rejoin
+                showToast('Reconnecting to previous session...', 'info');
+
+                try {
+                    await initPeer();
+                    const conn = await connectToHost(roomCode);
+
+                    state.roomCode = roomCode;
+                    state.playerName = name;
+                    state.isHost = false;
+
+                    conn.send({ type: 'join-room', name: name, color: state.playerColor });
+
+                    elements.displayRoomCode.textContent = roomCode;
+                    elements.startGameBtn.style.display = 'none';
+                    elements.gameSettings.style.display = 'none';
+                    showScreen('waiting-room');
+                    showToast('Reconnected!', 'success');
+                } catch (joinErr) {
+                    console.log('Auto-rejoin failed, room may no longer exist:', joinErr);
+                    showToast('Room no longer exists. Create or join a new room.', 'error');
+                    localStorage.removeItem('skribbl_session');
+                }
             }
         } catch (e) {
             console.error('Failed to restore session:', e);
