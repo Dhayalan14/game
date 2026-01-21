@@ -65,6 +65,7 @@ const state = {
     hintsUsed: 0,
     timerInterval: null,
     hintTimers: [], // Array to store hint timeout IDs
+    roundEndTimer: null, // Timeout ID for ending the round
     timeLeft: 0,
     currentDrawerIndex: -1,
     guessedPlayers: new Set(),
@@ -705,6 +706,10 @@ function resetState() {
     stopTimer();
     state.hintTimers.forEach(timer => clearTimeout(timer));
     state.hintTimers = [];
+    if (state.roundEndTimer) {
+        clearTimeout(state.roundEndTimer);
+        state.roundEndTimer = null;
+    }
 }
 
 function broadcast(message, excludePeerId = null) {
@@ -1194,6 +1199,12 @@ function handleWordSelected(word, difficulty, drawerId) {
     state.hintTimers.forEach(timer => clearTimeout(timer));
     state.hintTimers = [];
 
+    // Clear any previous round-end timer
+    if (state.roundEndTimer) {
+        clearTimeout(state.roundEndTimer);
+        state.roundEndTimer = null;
+    }
+
     // Schedule automatic hints
     if (state.hintsPerRound > 0) {
         const interval = (state.roundTime * 1000) / (state.hintsPerRound + 1);
@@ -1208,9 +1219,14 @@ function handleWordSelected(word, difficulty, drawerId) {
     }
 
     elements.wordHint.textContent = hint;
-    startTimer(state.roundTime);
+    // Only start timer once (not twice)
+    if (drawerId !== state.playerId) {
+        // Non-drawing host starts timer here
+        startTimer(state.roundTime);
+    }
 
-    setTimeout(() => {
+    // Track the round-end timeout so we can cancel it if needed
+    state.roundEndTimer = setTimeout(() => {
         if (state.gameStarted && state.currentWord) {
             endRound('time');
         }
@@ -1286,6 +1302,15 @@ function endRound(reason) {
 
     if (window.playSound) playSound('roundEnd');
     showRoundEnd(state.currentWord, state.players);
+
+    // Clear round-end timer to prevent double-firing
+    if (state.roundEndTimer) {
+        clearTimeout(state.roundEndTimer);
+        state.roundEndTimer = null;
+    }
+    // Clear hint timers
+    state.hintTimers.forEach(timer => clearTimeout(timer));
+    state.hintTimers = [];
 
     state.currentWord = null;
     state.isDrawing = false;
