@@ -1586,6 +1586,14 @@ elements.joinRoomBtn.addEventListener('click', async () => {
 
         conn.send({ type: 'join-room', name: name, color: state.playerColor });
 
+        // Save session
+        localStorage.setItem('skribbl_session', JSON.stringify({
+            name: state.playerName,
+            roomCode: state.roomCode,
+            id: state.playerId,
+            color: state.playerColor
+        }));
+
         elements.displayRoomCode.textContent = code;
         elements.startGameBtn.style.display = 'none';
         elements.gameSettings.style.display = 'none';
@@ -1712,5 +1720,39 @@ window.addEventListener('beforeunload', (e) => {
 // Initialize
 clearCanvas();
 window.selectWord = selectWord;
+
+// Check for existing session on page load
+window.addEventListener('load', () => {
+    const session = localStorage.getItem('skribbl_session');
+    if (session) {
+        try {
+            const { name, roomCode, id, color } = JSON.parse(session);
+            if (name && roomCode) {
+                // Pre-fill inputs
+                const nameInput = document.getElementById('player-name');
+                const codeInput = document.getElementById('room-code-input');
+                const joinBtn = document.getElementById('join-room-btn');
+
+                if (nameInput) nameInput.value = name;
+                if (codeInput) codeInput.value = roomCode;
+
+                // Restore state
+                state.playerId = id;
+                state.playerColor = color || '#6c5ce7'; // Default if missing
+
+                // Auto-join
+                setTimeout(() => {
+                    if (joinBtn) {
+                        joinBtn.click();
+                        showToast('Restoring previous session...', 'info');
+                    }
+                }, 500);
+            }
+        } catch (e) {
+            console.error('Failed to restore session:', e);
+            localStorage.removeItem('skribbl_session');
+        }
+    }
+});
 
 console.log('🎨 Varaipadam loaded! வரைபடம்');

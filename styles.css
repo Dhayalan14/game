@@ -1341,11 +1341,13 @@ input[type="text"]:focus {
 
     .canvas-area {
         order: 2;
+        min-height: 400px;
+        flex: 0 0 auto;
     }
 
     .chat-area {
         order: 3;
-        height: 400px;
+        height: 300px;
     }
 
     .game-players-list {
@@ -1365,8 +1367,10 @@ input[type="text"]:focus {
     }
 
     #word-hint {
-        font-size: 1.3rem;
-        letter-spacing: 3px;
+        font-size: 1.5rem;
+        letter-spacing: 4px;
+        color: #ffffff;
+        text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
     }
 
     .drawing-tools {
