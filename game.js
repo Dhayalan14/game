@@ -919,8 +919,6 @@ function handleMessage(message, conn) {
             state.currentDrawerIndex = message.drawerIndex;
             state.hintsUsed = 0;
             elements.drawingTools.style.display = 'none';
-            elements.hintBtn.style.display = state.hintsPerRound > 0 ? 'inline-block' : 'none';
-            elements.hintBtn.disabled = false;
             elements.wordHint.textContent = '???';
             addChatMessage(`🎨 ${message.drawer} is drawing!`, 'system');
             elements.roundDisplay.textContent = `${message.round}/${message.totalRounds}`;
@@ -938,7 +936,6 @@ function handleMessage(message, conn) {
             state.currentWord = message.word;
             state.canvasHistory = [];
             elements.drawingTools.style.display = 'flex';
-            elements.hintBtn.style.display = 'none';
             elements.wordHint.textContent = message.word.toUpperCase();
             clearCanvas();
             hideWordSelection();
@@ -1095,7 +1092,7 @@ function revealHint() {
     elements.wordHint.textContent = hint;
 
     if (state.hintsUsed >= state.hintsPerRound) {
-        elements.hintBtn.disabled = true;
+        // All hints used
     }
 
     if (window.playSound) playSound('hint');
@@ -1192,7 +1189,6 @@ function handleWordSelected(word, difficulty, drawerId) {
         state.isDrawing = true;
         state.canvasHistory = [];
         elements.drawingTools.style.display = 'flex';
-        elements.hintBtn.style.display = 'none';
         elements.wordHint.textContent = state.currentWord.toUpperCase();
         clearCanvas();
         hideWordSelection();
@@ -1752,15 +1748,7 @@ elements.roomCodeInput.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') elements.joinRoomBtn.click();
 });
 
-// Hint button
-elements.hintBtn.addEventListener('click', () => {
-    if (state.isHost) {
-        revealHint();
-    } else {
-        // Players can request hints (host decides)
-        sendToHost({ type: 'request-hint' });
-    }
-});
+// Hint button removed from UI
 
 // Play Again
 elements.playAgainBtn.addEventListener('click', () => {
