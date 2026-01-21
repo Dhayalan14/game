@@ -1740,13 +1740,8 @@ window.addEventListener('load', () => {
                 state.playerId = id;
                 state.playerColor = color || '#6c5ce7'; // Default if missing
 
-                // Auto-join
-                setTimeout(() => {
-                    if (joinBtn) {
-                        joinBtn.click();
-                        showToast('Restoring previous session...', 'info');
-                    }
-                }, 500);
+                // Auto-join removed as per request
+                showToast('Previous session found! Click Join to continue.', 'info');
             }
         } catch (e) {
             console.error('Failed to restore session:', e);
