@@ -60,6 +60,7 @@ const state = {
     totalRounds: 6,
     roundTime: 80,
     roundsPerPlayer: 2,
+    wordChoices: 3,
     hintsPerRound: 1,
     hintsUsed: 0,
     timerInterval: null,
@@ -85,6 +86,7 @@ const elements = {
     // Lobby
     playerNameInput: document.getElementById('player-name'),
     avatarColors: document.querySelectorAll('.avatar-color'),
+    customRoomCodeInput: document.getElementById('custom-room-code'),
     createRoomBtn: document.getElementById('create-room-btn'),
     roomCodeInput: document.getElementById('room-code-input'),
     joinRoomBtn: document.getElementById('join-room-btn'),
@@ -97,6 +99,7 @@ const elements = {
     gameSettings: document.getElementById('game-settings'),
     roundsSelect: document.getElementById('rounds-select'),
     timeSelect: document.getElementById('time-select'),
+    wordChoicesSelect: document.getElementById('word-choices-select'),
     hintsSelect: document.getElementById('hints-select'),
     startGameBtn: document.getElementById('start-game-btn'),
     leaveRoomBtn: document.getElementById('leave-room-btn'),
@@ -811,6 +814,7 @@ function handleMessage(message, conn) {
             state.players = message.players;
             state.totalRounds = message.totalRounds;
             state.roundTime = message.roundTime;
+            state.wordChoices = message.wordChoices || 3;
             state.hintsPerRound = message.hintsPerRound;
             showScreen('game');
             resizeCanvas();
@@ -954,16 +958,30 @@ function handleMessage(message, conn) {
 // ============================================
 // GAME LOGIC (HOST ONLY)
 // ============================================
-function getRandomWords(count = 3) {
-    const easyWord = WORDS.easy[Math.floor(Math.random() * WORDS.easy.length)];
-    const mediumWord = WORDS.medium[Math.floor(Math.random() * WORDS.medium.length)];
-    const hardWord = WORDS.hard[Math.floor(Math.random() * WORDS.hard.length)];
+function getRandomWords(count = null) {
+    const numWords = count || state.wordChoices || 3;
+    const words = [];
+    const difficulties = ['easy', 'medium', 'hard'];
+    const usedWords = new Set();
 
-    return [
-        { word: easyWord, difficulty: 'easy' },
-        { word: mediumWord, difficulty: 'medium' },
-        { word: hardWord, difficulty: 'hard' }
-    ];
+    // Always include at least one from each difficulty if possible
+    for (let i = 0; i < numWords; i++) {
+        const difficulty = difficulties[i % 3];
+        const wordList = WORDS[difficulty];
+
+        // Find a word we haven't used yet
+        let word = wordList[Math.floor(Math.random() * wordList.length)];
+        let attempts = 0;
+        while (usedWords.has(word) && attempts < 10) {
+            word = wordList[Math.floor(Math.random() * wordList.length)];
+            attempts++;
+        }
+
+        usedWords.add(word);
+        words.push({ word: word, difficulty: difficulty });
+    }
+
+    return words;
 }
 
 function createHint(word, revealCount = 0) {
@@ -1397,11 +1415,27 @@ elements.createRoomBtn.addEventListener('click', async () => {
         return;
     }
 
+    // Get custom room code or generate random
+    let roomCode = elements.customRoomCodeInput.value.trim().toUpperCase();
+    if (roomCode) {
+        // Validate custom code
+        if (roomCode.length < 4 || roomCode.length > 6) {
+            showToast('Room code must be 4-6 characters', 'error');
+            return;
+        }
+        // Only allow alphanumeric
+        if (!/^[A-Z0-9]+$/.test(roomCode)) {
+            showToast('Room code can only contain letters and numbers', 'error');
+            return;
+        }
+    } else {
+        roomCode = generateRoomCode();
+    }
+
     elements.createRoomBtn.disabled = true;
     elements.createRoomBtn.innerHTML = '<span class="btn-icon">⏳</span> Creating...';
 
     try {
-        const roomCode = generateRoomCode();
         await initPeer(roomCode);
 
         state.roomCode = roomCode;
@@ -1424,6 +1458,9 @@ elements.createRoomBtn.addEventListener('click', async () => {
         showToast('Room created!', 'success');
     } catch (err) {
         console.error('Failed to create room:', err);
+        if (err.type === 'unavailable-id') {
+            showToast('This room code is already taken. Try another!', 'error');
+        }
     }
 
     elements.createRoomBtn.disabled = false;
@@ -1439,8 +1476,8 @@ elements.joinRoomBtn.addEventListener('click', async () => {
         showToast('Please enter your name', 'error');
         return;
     }
-    if (!code || code.length !== 6) {
-        showToast('Please enter a valid 6-character room code', 'error');
+    if (!code || code.length < 4 || code.length > 6) {
+        showToast('Please enter a valid room code (4-6 characters)', 'error');
         return;
     }
 
@@ -1490,6 +1527,7 @@ elements.startGameBtn.addEventListener('click', () => {
     // Get settings
     state.roundsPerPlayer = parseInt(elements.roundsSelect.value);
     state.roundTime = parseInt(elements.timeSelect.value);
+    state.wordChoices = parseInt(elements.wordChoicesSelect?.value || 3);
     state.hintsPerRound = parseInt(elements.hintsSelect.value);
 
     state.gameStarted = true;
@@ -1503,6 +1541,7 @@ elements.startGameBtn.addEventListener('click', () => {
         players: state.players,
         totalRounds: state.totalRounds,
         roundTime: state.roundTime,
+        wordChoices: state.wordChoices,
         hintsPerRound: state.hintsPerRound
     });
 

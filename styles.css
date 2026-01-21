@@ -1333,10 +1333,12 @@ input[type="text"]:focus {
     .game-main {
         grid-template-columns: 1fr;
         grid-template-rows: auto 1fr auto;
+        gap: 10px;
     }
 
     .player-sidebar {
         order: 1;
+        padding: 10px;
     }
 
     .canvas-area {
@@ -1345,17 +1347,36 @@ input[type="text"]:focus {
 
     .chat-area {
         order: 3;
-        max-height: 200px;
+        min-height: 250px;
+        max-height: 300px;
+    }
+
+    .chat-messages {
+        min-height: 120px;
+        max-height: 150px;
     }
 
     .game-players-list {
         flex-direction: row;
         flex-wrap: wrap;
+        gap: 5px;
     }
 
     .game-players-list li {
         flex: 1 1 auto;
-        min-width: 120px;
+        min-width: 100px;
+        padding: 8px;
+        font-size: 0.85rem;
+    }
+
+    .game-header {
+        flex-wrap: wrap;
+        gap: 10px;
+        padding: 10px 15px;
+    }
+
+    .settings-grid {
+        grid-template-columns: repeat(2, 1fr);
     }
 }
 
@@ -1364,12 +1385,171 @@ input[type="text"]:focus {
         font-size: 2.2rem;
     }
 
+    .tagline {
+        font-size: 0.9rem;
+    }
+
     #word-hint {
-        font-size: 1.3rem;
-        letter-spacing: 3px;
+        font-size: 1.1rem;
+        letter-spacing: 2px;
+    }
+
+    .word-display {
+        flex-direction: column;
+        gap: 5px;
     }
 
     .drawing-tools {
         flex-wrap: wrap;
+        gap: 8px;
+        padding: 8px;
+    }
+
+    .tool-group.colors {
+        gap: 6px;
+    }
+
+    .color-btn {
+        width: 28px;
+        height: 28px;
+    }
+
+    .game-container {
+        height: auto;
+        min-height: 100vh;
+    }
+
+    .canvas-area {
+        min-height: 300px;
+    }
+
+    .chat-area {
+        min-height: 300px;
+        max-height: 350px;
+    }
+
+    .chat-messages {
+        min-height: 180px;
+        max-height: 200px;
+        font-size: 0.9rem;
+    }
+
+    .chat-input-container {
+        padding: 10px;
+    }
+
+    .chat-input-container input {
+        font-size: 16px;
+        /* Prevents zoom on iOS */
+    }
+
+    .reactions {
+        padding: 8px;
+        gap: 6px;
+    }
+
+    .reaction-btn {
+        width: 32px;
+        height: 32px;
+        font-size: 1rem;
+    }
+
+    .timer-ring {
+        width: 50px;
+        height: 50px;
+    }
+
+    .timer-text {
+        font-size: 1rem;
+    }
+
+    .round-info {
+        align-items: center;
+    }
+
+    .round-label {
+        font-size: 0.7rem;
+    }
+
+    .round-number {
+        font-size: 1rem;
+    }
+
+    .room-code-display span {
+        font-size: 1.8rem;
+        letter-spacing: 4px;
+    }
+
+    .lobby-container .glass-card {
+        padding: 20px;
+    }
+
+    .settings-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+
+    .setting-item select {
+        padding: 12px;
+    }
+
+    .modal-content {
+        margin: 10px;
+        padding: 20px;
+    }
+
+    .overlay-content {
+        margin: 20px;
+        padding: 25px;
+    }
+}
+
+/* Extra small devices */
+@media (max-width: 400px) {
+    .logo h1 {
+        font-size: 1.8rem;
+    }
+
+    .logo-icon {
+        font-size: 3rem;
+    }
+
+    .btn {
+        padding: 12px 20px;
+        font-size: 0.9rem;
+    }
+
+    .game-header {
+        padding: 8px 10px;
+    }
+
+    #word-hint {
+        font-size: 1rem;
+    }
+
+    .chat-area {
+        min-height: 280px;
+    }
+
+    .player-sidebar h3 {
+        font-size: 0.9rem;
+    }
+}
+
+/* Landscape mobile */
+@media (max-height: 500px) and (orientation: landscape) {
+    .game-main {
+        grid-template-columns: 150px 1fr 200px;
+        grid-template-rows: 1fr;
+    }
+
+    .player-sidebar,
+    .chat-area {
+        max-height: calc(100vh - 100px);
+        overflow-y: auto;
+    }
+
+    .canvas-area {
+        max-height: calc(100vh - 100px);
     }
 }
