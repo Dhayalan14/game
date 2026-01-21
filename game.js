@@ -482,7 +482,6 @@ function initPeer(peerId = null) {
             handleNewConnection(conn);
         });
     });
-});
 }
 
 function connectToHost(hostId) {
