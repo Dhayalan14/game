@@ -1,43 +1,40 @@
 // ============================================
-// WORD LIST (Expanded with categories)
+// WORD LIST (Combined)
 // ============================================
-const WORDS = {
-    easy: [
-        "cat", "dog", "sun", "moon", "tree", "house", "car", "book", "fish", "bird",
-        "apple", "banana", "pizza", "cake", "ice cream", "cookie", "bread", "cheese",
-        "ball", "hat", "shoe", "shirt", "pants", "glasses", "watch", "ring",
-        "chair", "table", "bed", "lamp", "door", "window", "clock", "phone",
-        "star", "heart", "cloud", "rain", "snow", "fire", "water", "flower",
-        "baby", "king", "queen", "eye", "nose", "mouth", "hand", "foot",
-        "cup", "fork", "spoon", "plate", "bowl", "knife", "bottle", "glass",
-        "boat", "bus", "bike", "kite", "drum", "bell", "flag", "gift"
-    ],
-    medium: [
-        "airplane", "helicopter", "bicycle", "motorcycle", "train", "submarine",
-        "guitar", "piano", "drums", "violin", "microphone", "headphones",
-        "computer", "keyboard", "television", "camera", "robot", "rocket",
-        "umbrella", "backpack", "wallet", "suitcase", "envelope", "scissors",
-        "hamburger", "hotdog", "spaghetti", "pancake", "popcorn", "donut",
-        "penguin", "giraffe", "kangaroo", "octopus", "dolphin", "crocodile",
-        "astronaut", "pirate", "wizard", "ninja", "zombie", "vampire",
-        "diamond", "treasure", "castle", "bridge", "mountain", "volcano",
-        "rainbow", "tornado", "lightning", "snowman", "campfire", "waterfall",
-        "birthday", "wedding", "concert", "museum", "library", "hospital",
-        "butterfly", "ladybug", "dragonfly", "scorpion", "jellyfish", "starfish"
-    ],
-    hard: [
-        "hibernation", "constellation", "photosynthesis", "camouflage", "ecosystem",
-        "democracy", "revolution", "imagination", "celebration", "adventure",
-        "skyscraper", "lighthouse", "treehouse", "greenhouse", "warehouse",
-        "nightmare", "daydream", "flashback", "time travel", "teleportation",
-        "fireworks", "chandelier", "kaleidoscope", "hologram", "reflection",
-        "acrobat", "magician", "archaeologist", "photographer", "firefighter",
-        "orchestra", "symphony", "choreography", "masterpiece", "sculpture",
-        "encryption", "algorithm", "artificial intelligence", "virtual reality",
-        "black hole", "solar system", "milky way", "supernova", "asteroid",
-        "bungee jumping", "paragliding", "scuba diving", "rock climbing"
-    ]
-};
+const WORDS = [
+    // Simple words
+    "cat", "dog", "sun", "moon", "tree", "house", "car", "book", "fish", "bird",
+    "apple", "banana", "pizza", "cake", "ice cream", "cookie", "bread", "cheese",
+    "ball", "hat", "shoe", "shirt", "pants", "glasses", "watch", "ring",
+    "chair", "table", "bed", "lamp", "door", "window", "clock", "phone",
+    "star", "heart", "cloud", "rain", "snow", "fire", "water", "flower",
+    "baby", "king", "queen", "eye", "nose", "mouth", "hand", "foot",
+    "cup", "fork", "spoon", "plate", "bowl", "knife", "bottle", "glass",
+    "boat", "bus", "bike", "kite", "drum", "bell", "flag", "gift",
+    // Medium words
+    "airplane", "helicopter", "bicycle", "motorcycle", "train", "submarine",
+    "guitar", "piano", "drums", "violin", "microphone", "headphones",
+    "computer", "keyboard", "television", "camera", "robot", "rocket",
+    "umbrella", "backpack", "wallet", "suitcase", "envelope", "scissors",
+    "hamburger", "hotdog", "spaghetti", "pancake", "popcorn", "donut",
+    "penguin", "giraffe", "kangaroo", "octopus", "dolphin", "crocodile",
+    "astronaut", "pirate", "wizard", "ninja", "zombie", "vampire",
+    "diamond", "treasure", "castle", "bridge", "mountain", "volcano",
+    "rainbow", "tornado", "lightning", "snowman", "campfire", "waterfall",
+    "birthday", "wedding", "concert", "museum", "library", "hospital",
+    "butterfly", "ladybug", "dragonfly", "scorpion", "jellyfish", "starfish",
+    // Challenging words
+    "hibernation", "constellation", "photosynthesis", "camouflage", "ecosystem",
+    "democracy", "revolution", "imagination", "celebration", "adventure",
+    "skyscraper", "lighthouse", "treehouse", "greenhouse", "warehouse",
+    "nightmare", "daydream", "flashback", "time travel", "teleportation",
+    "fireworks", "chandelier", "kaleidoscope", "hologram", "reflection",
+    "acrobat", "magician", "archaeologist", "photographer", "firefighter",
+    "orchestra", "symphony", "choreography", "masterpiece", "sculpture",
+    "encryption", "algorithm", "artificial intelligence", "virtual reality",
+    "black hole", "solar system", "milky way", "supernova", "asteroid",
+    "bungee jumping", "paragliding", "scuba diving", "rock climbing"
+];
 
 // ============================================
 // GAME STATE
@@ -66,6 +63,7 @@ const state = {
     timerInterval: null,
     hintTimers: [], // Array to store hint timeout IDs
     roundEndTimer: null, // Timeout ID for ending the round
+    wordSelectionTimer: null, // Timeout for word selection
     timeLeft: 0,
     currentDrawerIndex: -1,
     guessedPlayers: new Set(),
@@ -1036,7 +1034,6 @@ function handleMessage(message, conn) {
 
         case 'reaction':
             showFloatingReaction(message.reaction);
-            addChatMessage(`${message.playerName} reacted: ${message.reaction}`, 'system');
             if (state.isHost) {
                 broadcast(message, conn.peer);
             }
@@ -1050,24 +1047,15 @@ function handleMessage(message, conn) {
 function getRandomWords(count = null) {
     const numWords = count || state.wordChoices || 3;
     const words = [];
-    const difficulties = ['easy', 'medium', 'hard'];
-    const usedWords = new Set();
+    const usedIndices = new Set();
 
-    // Always include at least one from each difficulty if possible
-    for (let i = 0; i < numWords; i++) {
-        const difficulty = difficulties[i % 3];
-        const wordList = WORDS[difficulty];
-
-        // Find a word we haven't used yet
-        let word = wordList[Math.floor(Math.random() * wordList.length)];
-        let attempts = 0;
-        while (usedWords.has(word) && attempts < 10) {
-            word = wordList[Math.floor(Math.random() * wordList.length)];
-            attempts++;
+    // Pick random words from the combined list
+    while (words.length < numWords && usedIndices.size < WORDS.length) {
+        const index = Math.floor(Math.random() * WORDS.length);
+        if (!usedIndices.has(index)) {
+            usedIndices.add(index);
+            words.push({ word: WORDS[index] });
         }
-
-        usedWords.add(word);
-        words.push({ word: word, difficulty: difficulty });
     }
 
     return words;
@@ -1154,14 +1142,39 @@ function startRound() {
         }
     }
 
+    // Set 20-second timeout for word selection
+    if (state.wordSelectionTimer) {
+        clearTimeout(state.wordSelectionTimer);
+    }
+    state.wordSelectionTimer = setTimeout(() => {
+        if (state.gameStarted && !state.currentWord) {
+            addChatMessage(`${drawer.name} took too long to choose! Skipping...`, 'system');
+            broadcast({
+                type: 'chat-broadcast',
+                text: `${drawer.name} took too long to choose! Skipping...`,
+                msgType: 'system'
+            });
+            // Skip to next round
+            if (state.round >= state.totalRounds) {
+                endGame();
+            } else {
+                startRound();
+            }
+        }
+    }, 20000);
+
     state.isDrawing = false;
     elements.drawingTools.style.display = 'none';
-    elements.hintBtn.style.display = 'none'; // Automatic hints only
-    elements.hintBtn.disabled = false;
     elements.wordHint.textContent = '???';
 }
 
 function handleWordSelected(word, difficulty, drawerId) {
+    // Clear word selection timer
+    if (state.wordSelectionTimer) {
+        clearTimeout(state.wordSelectionTimer);
+        state.wordSelectionTimer = null;
+    }
+
     state.currentWord = word.toLowerCase();
     state.currentWordDifficulty = difficulty;
     state.roundStartTime = Date.now();
@@ -1205,17 +1218,15 @@ function handleWordSelected(word, difficulty, drawerId) {
         state.roundEndTimer = null;
     }
 
-    // Schedule automatic hints
+    // Schedule automatic hint at 60% elapsed time (40% remaining)
     if (state.hintsPerRound > 0) {
-        const interval = (state.roundTime * 1000) / (state.hintsPerRound + 1);
-        for (let i = 1; i <= state.hintsPerRound; i++) {
-            const timer = setTimeout(() => {
-                if (state.gameStarted && state.currentWord && state.roundStartTime) {
-                    revealHint();
-                }
-            }, interval * i);
-            state.hintTimers.push(timer);
-        }
+        const hintTime = state.roundTime * 0.6 * 1000; // 60% of round time
+        const timer = setTimeout(() => {
+            if (state.gameStarted && state.currentWord && state.roundStartTime) {
+                revealHint();
+            }
+        }, hintTime);
+        state.hintTimers.push(timer);
     }
 
     elements.wordHint.textContent = hint;
@@ -1248,11 +1259,8 @@ function processGuess(text, playerName, playerId) {
         const elapsed = (Date.now() - state.roundStartTime) / 1000;
         const timeBonus = Math.max(0, Math.floor((state.roundTime - elapsed) / state.roundTime * 200));
 
-        // Difficulty bonus
-        const difficultyBonus = state.currentWordDifficulty === 'hard' ? 100 :
-            state.currentWordDifficulty === 'medium' ? 50 : 0;
-
-        const points = 100 + timeBonus + difficultyBonus;
+        // Same points for all words (no difficulty bonus)
+        const points = 100 + timeBonus;
 
         const player = state.players.find(p => p.id === playerId);
         if (player) player.score += points;

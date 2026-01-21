@@ -816,13 +816,18 @@ input[type="text"]:focus {
 .word-display {
     flex: 1;
     text-align: center;
+    max-width: 60%;
+    overflow: hidden;
 }
 
 #word-hint {
-    font-size: 2rem;
+    font-size: clamp(1rem, 4vw, 2rem);
     font-weight: 700;
-    letter-spacing: 6px;
+    letter-spacing: 4px;
     color: var(--accent-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .timer-container {
@@ -1126,6 +1131,8 @@ input[type="text"]:focus {
 .chat-input-container input {
     flex: 1;
     padding: 12px 15px;
+    color: #ffffff;
+    background: rgba(0, 0, 0, 0.3);
 }
 
 /* ============================================
