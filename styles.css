@@ -550,7 +550,7 @@ input[type="text"]:focus {
 }
 
 .logo-icon {
-    font-size: 4rem;
+    font-size: 2rem;
     display: block;
     margin-bottom: 10px;
     animation: bounce 2s ease-in-out infinite;
@@ -569,7 +569,7 @@ input[type="text"]:focus {
 }
 
 .logo h1 {
-    font-size: 3rem;
+    font-size: 4rem;
     font-weight: 800;
     letter-spacing: -2px;
 }
