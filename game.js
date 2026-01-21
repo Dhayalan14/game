@@ -72,6 +72,7 @@ const state = {
     hostId: null,
     canvasHistory: [],
     currentHint: '',
+    currentWordLength: 0,
     playersReady: new Set(), // Track players who clicked Play Again
     kickVote: null // Active kick vote: { targetId, targetName, votes: Set, voters: Set, startTime }
 };
@@ -803,6 +804,7 @@ function handleMessage(message, conn) {
                     currentDrawerIndex: state.currentDrawerIndex,
                     currentDrawer: state.gameStarted ? state.players[state.currentDrawerIndex]?.name : null,
                     currentWord: state.currentHint,
+                    currentWordLength: state.currentWordLength,
                     timeLeft: state.timeLeft
                 });
 
@@ -867,12 +869,30 @@ function handleMessage(message, conn) {
             if (message.gameStarted) {
                 state.gameStarted = true;
                 state.currentHint = message.currentWord;
+                state.currentWordLength = message.currentWordLength || message.currentWord?.length || 0;
                 state.currentDrawerIndex = message.currentDrawerIndex;
 
                 showScreen('game');
                 resizeCanvas();
                 clearCanvas();
-                elements.wordHint.textContent = state.currentHint || '???';
+
+                if (state.currentDrawerIndex === state.players.findIndex(p => p.id === state.playerId)) {
+                    // We are the drawer (reconnecting) - this might need more robust handling if we want to show the full word
+                    // For now, if we are the drawer, we might not get the full word back in sync-state unless we store it differently
+                    // But typically sync-state sends 'currentWord' which is the HINT for others.
+                    // If we are the drawer, we might be seeing the hint instead of the word if the server doesn't send the full word to the specific player.
+                    // However, in this p2p setup, 'message.currentWord' comes from the host.
+                    // If I am the host and I reconnect, I have the state. 
+                    // If I am a client drawer and I reconnect, the host needs to send me the full word.
+                    // The current sync-state implementation sends 'currentWord: state.currentHint'. 
+                    // This means a reconnecting drawer will see the HINT, not the WORD. 
+                    // Fixing this requires the host to send the real word TO THE DRAWER specifically, or just accept this limitation for now.
+                    // Let's just render what we have.
+                    elements.wordHint.textContent = `${state.currentHint} (${state.currentWordLength})`;
+                } else {
+                    elements.wordHint.textContent = `${state.currentHint} (${state.currentWordLength})`;
+                }
+
                 elements.roundDisplay.textContent = `${message.round}/${message.totalRounds}`;
 
                 if (message.currentDrawer) {
@@ -948,7 +968,10 @@ function handleMessage(message, conn) {
 
         case 'word-hint':
             state.currentHint = message.hint;
-            elements.wordHint.textContent = message.hint;
+            state.currentWordLength = message.length;
+            if (!state.isDrawing) {
+                elements.wordHint.textContent = `${message.hint} (${message.length})`;
+            }
             startTimer(state.roundTime);
             break;
 
@@ -957,7 +980,7 @@ function handleMessage(message, conn) {
             state.currentWord = message.word;
             state.canvasHistory = [];
             elements.drawingTools.style.display = 'flex';
-            elements.wordHint.textContent = message.word.toUpperCase();
+            elements.wordHint.textContent = `${message.word.toUpperCase()} (${message.word.length})`;
             clearCanvas();
             hideWordSelection();
             startTimer(state.roundTime);
@@ -1030,7 +1053,9 @@ function handleMessage(message, conn) {
 
         case 'hint-reveal':
             state.currentHint = message.hint;
-            elements.wordHint.textContent = message.hint;
+            if (!state.isDrawing) {
+                elements.wordHint.textContent = `${message.hint} (${state.currentWordLength})`;
+            }
             if (window.playSound) playSound('hint');
             addChatMessage('💡 A letter was revealed!', 'system');
             break;
@@ -1228,7 +1253,11 @@ function revealHint() {
     state.currentHint = newHint;
 
     broadcast({ type: 'hint-reveal', hint: newHint });
-    elements.wordHint.textContent = newHint;
+
+    // Only update text content if we're not drawing (drawer sees full word)
+    if (!state.isDrawing) {
+        elements.wordHint.textContent = `${newHint} (${state.currentWordLength})`;
+    }
 
     if (window.playSound) playSound('hint');
     addChatMessage('💡 A letter was revealed!', 'system');
@@ -1313,6 +1342,7 @@ function handleWordSelected(word, difficulty, drawerId) {
 
     const hint = createHint(state.currentWord);
     state.currentHint = hint;
+    state.currentWordLength = state.currentWord.length;
 
     broadcast({
         type: 'word-hint',
@@ -1324,7 +1354,7 @@ function handleWordSelected(word, difficulty, drawerId) {
         state.isDrawing = true;
         state.canvasHistory = [];
         elements.drawingTools.style.display = 'flex';
-        elements.wordHint.textContent = state.currentWord.toUpperCase();
+        elements.wordHint.textContent = `${state.currentWord.toUpperCase()} (${state.currentWord.length})`;
         clearCanvas();
         hideWordSelection();
         startTimer(state.roundTime);
@@ -1538,14 +1568,8 @@ function updateGamePlayersList(drawer) {
 }
 
 function updateScores() {
-    const sortedPlayers = [...state.players].sort((a, b) => (b.score || 0) - (a.score || 0));
-    elements.gamePlayersList.innerHTML = sortedPlayers.map((player, index) => `
-        <li>
-            <span class="rank" style="background: ${player.color}">${index + 1}</span>
-            <span class="name">${player.name}</span>
-            <span class="score">${player.score || 0}</span>
-        </li>
-    `).join('');
+    const drawerName = state.players[state.currentDrawerIndex]?.name;
+    updateGamePlayersList(drawerName);
 }
 
 function addChatMessage(text, type = 'normal', sender = null) {

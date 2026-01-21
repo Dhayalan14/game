@@ -809,7 +809,7 @@ input[type="text"]:focus {
 }
 
 .round-number {
-    font-size: 1.5rem;
+    font-size: 1.2rem;
     font-weight: 700;
 }
 
@@ -831,8 +831,8 @@ input[type="text"]:focus {
 }
 
 .timer-container {
-    width: 60px;
-    height: 60px;
+    width: 45px;
+    height: 45px;
 }
 
 .timer-ring {
@@ -869,7 +869,7 @@ input[type="text"]:focus {
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.25rem;
+    font-size: 1rem;
     font-weight: 700;
 }
 
@@ -878,7 +878,7 @@ input[type="text"]:focus {
     flex: 1;
     display: grid;
     grid-template-columns: 200px 1fr 280px;
-    gap: 8px;
+    gap: 2px;
     min-height: 0;
 }
 
