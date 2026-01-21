@@ -864,18 +864,21 @@ function handleMessage(message, conn) {
             updatePlayersList();
 
             if (message.gameStarted) {
+                state.gameStarted = true;
                 state.currentHint = message.currentWord;
-                // Don't restart timer here, wait for next round or sync time if needed
+                state.currentDrawerIndex = message.currentDrawerIndex;
+
                 showScreen('game');
                 resizeCanvas();
                 clearCanvas();
                 elements.wordHint.textContent = state.currentHint || '???';
+                elements.roundDisplay.textContent = `${message.round}/${message.totalRounds}`;
+
                 if (message.currentDrawer) {
                     addChatMessage(`Current drawer: ${message.currentDrawer}`, 'system');
                     updateGamePlayersList(message.currentDrawer);
                 }
 
-                // If it's your turn, might need more sync logic here, but for now just showing screen
                 addChatMessage('Rejoined the game!', 'system');
             } else {
                 // Game hasn't started yet, ensure we're on waiting room
