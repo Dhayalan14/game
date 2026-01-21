@@ -753,10 +753,18 @@ function handleMessage(message, conn) {
                     roundTime: state.roundTime,
                     hintsPerRound: state.hintsPerRound,
                     isReconnect: isReconnect,
-                    yourScore: previousScore
+                    yourScore: previousScore,
+                    currentDrawerIndex: state.currentDrawerIndex,
+                    currentDrawer: state.gameStarted ? state.players[state.currentDrawerIndex]?.name : null,
+                    currentWord: state.currentHint,
+                    timeLeft: state.timeLeft
                 });
 
                 updatePlayersList();
+                if (state.gameStarted) {
+                    updateGamePlayersList(state.players[state.currentDrawerIndex]?.name);
+                }
+
                 if (isReconnect) {
                     if (window.playSound) playSound('join');
                     showToast(`${message.name} reconnected!`, 'success');
@@ -777,6 +785,7 @@ function handleMessage(message, conn) {
             state.roomCode = message.roomCode;
             state.roundTime = message.roundTime || 80;
             state.hintsPerRound = message.hintsPerRound || 1;
+            state.currentDrawerIndex = message.currentDrawerIndex;
 
             if (message.isReconnect) {
                 showToast(`Reconnected with ${message.yourScore} points!`, 'success');
@@ -792,12 +801,36 @@ function handleMessage(message, conn) {
                 });
             }
 
+            // Ensure we are in the list if not already
+            if (!state.players.find(p => p.id === state.playerId)) {
+                state.players.push({
+                    id: state.playerId,
+                    name: state.playerName,
+                    color: state.playerColor,
+                    score: message.yourScore || 0,
+                    isHost: false
+                });
+            } else if (message.isReconnect) {
+                // Update our own score if we already existed (e.g. rapid rejoin)
+                const me = state.players.find(p => p.id === state.playerId);
+                if (me) me.score = message.yourScore || me.score;
+            }
+
             updatePlayersList();
 
             if (message.gameStarted) {
+                state.currentHint = message.currentWord;
+                // Don't restart timer here, wait for next round or sync time if needed
                 showScreen('game');
                 resizeCanvas();
                 clearCanvas();
+                elements.wordHint.textContent = state.currentHint || '???';
+                if (message.currentDrawer) {
+                    addChatMessage(`Current drawer: ${message.currentDrawer}`, 'system');
+                    updateGamePlayersList(message.currentDrawer);
+                }
+
+                // If it's your turn, might need more sync logic here, but for now just showing screen
                 addChatMessage('Rejoined the game!', 'system');
             }
             break;
@@ -805,6 +838,9 @@ function handleMessage(message, conn) {
         case 'player-joined':
             state.players = message.players;
             updatePlayersList();
+            if (state.gameStarted) {
+                updateGamePlayersList(state.players[state.currentDrawerIndex]?.name);
+            }
             if (window.playSound) playSound('join');
             showToast(`${message.player.name} joined!`, 'success');
             break;
