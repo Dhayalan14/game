@@ -488,29 +488,47 @@ function connectToHost(hostId) {
     return new Promise((resolve, reject) => {
         const conn = state.peer.connect(hostId, { reliable: true });
 
+        // Fail-safe timeout (increased to 10s)
         const timeout = setTimeout(() => {
+            cleanup();
             conn.close();
-            reject(new Error('Connection timed out. Room might not exist.'));
-        }, 5000);
+            reject(new Error('Connection timed out. Host not responding.'));
+        }, 10000);
+
+        // Listen for peer-unavailable on the main peer object
+        const peerErrorListener = (err) => {
+            if (err.type === 'peer-unavailable' && err.message.includes(hostId)) {
+                cleanup();
+                conn.close();
+                reject(new Error('Room code not found.'));
+            }
+        };
+        state.peer.on('error', peerErrorListener);
+
+        // Cleanup helper
+        function cleanup() {
+            clearTimeout(timeout);
+            state.peer.off('error', peerErrorListener);
+        }
 
         conn.on('open', () => {
-            clearTimeout(timeout);
+            cleanup();
             console.log('Connected to host:', hostId);
             state.connections.set(hostId, conn);
             resolve(conn);
         });
 
         conn.on('error', (err) => {
-            clearTimeout(timeout);
+            cleanup();
             reject(err);
         });
 
         // Handle immediate closure (e.g. host invalid)
         conn.on('close', () => {
-            clearTimeout(timeout);
+            cleanup();
             // If never opened, this helps catch it
             if (!state.connections.has(hostId)) {
-                reject(new Error('Connection failed/closed immediately'));
+                reject(new Error('Connection closed immediately.'));
             }
         });
     });
