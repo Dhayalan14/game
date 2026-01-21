@@ -1372,8 +1372,4 @@ input[type="text"]:focus {
     .drawing-tools {
         flex-wrap: wrap;
     }
-
-    .settings-grid {
-        grid-template-columns: 1fr;
-    }
 }

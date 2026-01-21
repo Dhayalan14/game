@@ -1539,6 +1539,26 @@ elements.createRoomBtn.addEventListener('click', async () => {
     elements.createRoomBtn.innerHTML = '<span class="btn-icon">✨</span> Create Room';
 });
 
+// Public Room Buttons
+document.querySelectorAll('.room-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const code = btn.dataset.code;
+        elements.roomCodeInput.value = code;
+
+        // Add visual feedback
+        btn.style.transform = 'scale(0.95)';
+        setTimeout(() => btn.style.transform = 'scale(1)', 100);
+
+        // Optional: Highlight the join button
+        elements.joinRoomBtn.classList.add('btn-primary');
+        elements.joinRoomBtn.classList.remove('btn-secondary');
+        setTimeout(() => {
+            elements.joinRoomBtn.classList.add('btn-secondary');
+            elements.joinRoomBtn.classList.remove('btn-primary');
+        }, 1000);
+    });
+});
+
 // Join Room
 elements.joinRoomBtn.addEventListener('click', async () => {
     const name = elements.playerNameInput.value.trim();
