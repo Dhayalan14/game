@@ -72,7 +72,8 @@ const state = {
     hostId: null,
     canvasHistory: [],
     currentHint: '',
-    playersReady: new Set() // Track players who clicked Play Again
+    playersReady: new Set(), // Track players who clicked Play Again
+    kickVote: null // Active kick vote: { targetId, targetName, votes: Set, voters: Set, startTime }
 };
 
 // ============================================
@@ -1068,6 +1069,107 @@ function handleMessage(message, conn) {
                 updateReadyStatus();
             }
             break;
+
+        case 'initiate-kick':
+            if (state.isHost) {
+                // Start a kick vote
+                if (state.kickVote) {
+                    // Already a vote in progress
+                    conn.send({ type: 'kick-error', message: 'A vote is already in progress' });
+                    return;
+                }
+                const target = state.players.find(p => p.id === message.targetId);
+                if (!target) return;
+                if (target.isHost) {
+                    conn.send({ type: 'kick-error', message: 'Cannot kick the host' });
+                    return;
+                }
+
+                state.kickVote = {
+                    targetId: message.targetId,
+                    targetName: target.name,
+                    votesYes: new Set([message.initiatorId]), // Initiator auto-votes yes
+                    votesNo: new Set(),
+                    startTime: Date.now()
+                };
+
+                broadcast({
+                    type: 'kick-vote-started',
+                    targetName: target.name,
+                    targetId: message.targetId,
+                    initiatorName: message.initiatorName
+                });
+
+                addChatMessage(`🗳️ Vote to kick ${target.name} started by ${message.initiatorName}`, 'system');
+
+                // Auto-end vote after 30 seconds
+                setTimeout(() => {
+                    if (state.kickVote && state.kickVote.targetId === message.targetId) {
+                        endKickVote();
+                    }
+                }, 30000);
+            }
+            break;
+
+        case 'cast-kick-vote':
+            if (state.isHost && state.kickVote) {
+                if (message.vote === 'yes') {
+                    state.kickVote.votesYes.add(message.playerId);
+                    state.kickVote.votesNo.delete(message.playerId);
+                } else {
+                    state.kickVote.votesNo.add(message.playerId);
+                    state.kickVote.votesYes.delete(message.playerId);
+                }
+
+                // Check if everyone has voted
+                const totalVoters = state.players.length - 1; // Exclude target
+                const totalVotes = state.kickVote.votesYes.size + state.kickVote.votesNo.size;
+
+                if (totalVotes >= totalVoters) {
+                    endKickVote();
+                } else {
+                    // Broadcast vote count update
+                    broadcast({
+                        type: 'kick-vote-update',
+                        votesYes: state.kickVote.votesYes.size,
+                        votesNo: state.kickVote.votesNo.size,
+                        needed: Math.ceil(totalVoters / 2) + 1
+                    });
+                }
+            }
+            break;
+
+        case 'kick-vote-started':
+            showKickVoteModal(message.targetName, message.targetId, message.initiatorName);
+            addChatMessage(`🗳️ Vote to kick ${message.targetName} started by ${message.initiatorName}`, 'system');
+            break;
+
+        case 'kick-vote-update':
+            updateKickVoteDisplay(message.votesYes, message.votesNo, message.needed);
+            break;
+
+        case 'kick-vote-result':
+            hideKickVoteModal();
+            if (message.kicked) {
+                addChatMessage(`❌ ${message.targetName} was kicked!`, 'system');
+                if (message.targetId === state.playerId) {
+                    showToast('You were kicked from the game', 'error');
+                    showScreen('lobby');
+                    resetState();
+                }
+            } else {
+                addChatMessage(`✅ ${message.targetName} was not kicked`, 'system');
+            }
+            state.players = message.players;
+            updatePlayersList();
+            if (state.gameStarted) {
+                updateGamePlayersList(state.players[state.currentDrawerIndex]?.name);
+            }
+            break;
+
+        case 'kick-error':
+            showToast(message.message, 'error');
+            break;
     }
 }
 
@@ -1421,14 +1523,18 @@ function updatePlayersList() {
 function updateGamePlayersList(drawer) {
     const sortedPlayers = [...state.players].sort((a, b) => (b.score || 0) - (a.score || 0));
 
-    elements.gamePlayersList.innerHTML = sortedPlayers.map((player, index) => `
+    elements.gamePlayersList.innerHTML = sortedPlayers.map((player, index) => {
+        const isMe = player.id === state.playerId;
+        const canKick = !isMe && !player.isHost && state.players.length > 2;
+        return `
         <li class="${player.name === drawer ? 'drawing' : ''}">
             <span class="rank" style="background: ${player.color}">${index + 1}</span>
             <span class="name">${player.name}</span>
             <span class="score">${player.score || 0}</span>
             ${player.name === drawer ? '<span class="status-icon">🎨</span>' : ''}
+            ${canKick ? `<button class="kick-btn" onclick="initiateKickVote('${player.id}', '${player.name}')" title="Vote to kick">🚫</button>` : ''}
         </li>
-    `).join('');
+    `}).join('');
 }
 
 function updateScores() {
@@ -1515,6 +1621,170 @@ function showGameEnd(rankings) {
     `).join('');
     elements.gameEndModal.classList.add('active');
 }
+
+// ============================================
+// KICK VOTE FUNCTIONS
+// ============================================
+function initiateKickVote(targetId, targetName) {
+    if (state.isHost) {
+        // Host initiates directly
+        const target = state.players.find(p => p.id === targetId);
+        if (!target || target.isHost) {
+            showToast('Cannot kick this player', 'error');
+            return;
+        }
+        if (state.kickVote) {
+            showToast('A vote is already in progress', 'error');
+            return;
+        }
+
+        state.kickVote = {
+            targetId: targetId,
+            targetName: targetName,
+            votesYes: new Set([state.playerId]),
+            votesNo: new Set(),
+            startTime: Date.now()
+        };
+
+        broadcast({
+            type: 'kick-vote-started',
+            targetName: targetName,
+            targetId: targetId,
+            initiatorName: state.playerName
+        });
+
+        addChatMessage(`🗳️ Vote to kick ${targetName} started`, 'system');
+        showKickVoteModal(targetName, targetId, state.playerName);
+
+        setTimeout(() => {
+            if (state.kickVote && state.kickVote.targetId === targetId) {
+                endKickVote();
+            }
+        }, 30000);
+    } else {
+        // Non-host sends request to host
+        sendToHost({
+            type: 'initiate-kick',
+            targetId: targetId,
+            initiatorId: state.playerId,
+            initiatorName: state.playerName
+        });
+    }
+}
+
+function endKickVote() {
+    if (!state.kickVote) return;
+
+    const totalVoters = state.players.length - 1;
+    const needed = Math.ceil(totalVoters / 2) + 1;
+    const kicked = state.kickVote.votesYes.size >= needed;
+
+    if (kicked) {
+        // Remove the player
+        const targetId = state.kickVote.targetId;
+        const targetConn = state.connections.get(targetId);
+        if (targetConn) {
+            targetConn.send({ type: 'kick-vote-result', kicked: true, targetName: state.kickVote.targetName, targetId: targetId, players: [] });
+            targetConn.close();
+        }
+        state.connections.delete(targetId);
+        state.players = state.players.filter(p => p.id !== targetId);
+    }
+
+    broadcast({
+        type: 'kick-vote-result',
+        kicked: kicked,
+        targetName: state.kickVote.targetName,
+        targetId: state.kickVote.targetId,
+        players: state.players
+    });
+
+    addChatMessage(kicked ? `❌ ${state.kickVote.targetName} was kicked!` : `✅ ${state.kickVote.targetName} was not kicked`, 'system');
+    hideKickVoteModal();
+    updatePlayersList();
+    if (state.gameStarted) {
+        updateGamePlayersList(state.players[state.currentDrawerIndex]?.name);
+    }
+
+    state.kickVote = null;
+}
+
+function showKickVoteModal(targetName, targetId, initiatorName) {
+    // Don't show vote UI to the target player
+    if (targetId === state.playerId) return;
+
+    let modal = document.getElementById('kick-vote-modal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'kick-vote-modal';
+        modal.className = 'modal';
+        modal.innerHTML = `
+            <div class="modal-content glass-card">
+                <h2>🗳️ Vote to Kick</h2>
+                <p id="kick-vote-text"></p>
+                <div id="kick-vote-count" style="margin: 15px 0; font-size: 1.1rem;"></div>
+                <div style="display: flex; gap: 15px; justify-content: center;">
+                    <button id="kick-vote-yes" class="btn btn-danger">👎 Kick</button>
+                    <button id="kick-vote-no" class="btn btn-secondary">👍 Keep</button>
+                </div>
+                <p style="margin-top: 10px; font-size: 0.8rem; color: var(--text-muted);">Vote ends in 30 seconds</p>
+            </div>
+        `;
+        document.body.appendChild(modal);
+    }
+
+    document.getElementById('kick-vote-text').textContent = `${initiatorName} wants to kick ${targetName}`;
+    document.getElementById('kick-vote-count').textContent = 'Votes: 1 Yes / 0 No';
+    modal.classList.add('active');
+
+    document.getElementById('kick-vote-yes').onclick = () => {
+        castKickVote('yes');
+        document.getElementById('kick-vote-yes').disabled = true;
+        document.getElementById('kick-vote-no').disabled = true;
+    };
+    document.getElementById('kick-vote-no').onclick = () => {
+        castKickVote('no');
+        document.getElementById('kick-vote-yes').disabled = true;
+        document.getElementById('kick-vote-no').disabled = true;
+    };
+}
+
+function hideKickVoteModal() {
+    const modal = document.getElementById('kick-vote-modal');
+    if (modal) {
+        modal.classList.remove('active');
+    }
+}
+
+function updateKickVoteDisplay(votesYes, votesNo, needed) {
+    const countEl = document.getElementById('kick-vote-count');
+    if (countEl) {
+        countEl.textContent = `Votes: ${votesYes} Yes / ${votesNo} No (need ${needed} to kick)`;
+    }
+}
+
+function castKickVote(vote) {
+    if (state.isHost) {
+        // Host votes directly
+        if (state.kickVote) {
+            if (vote === 'yes') {
+                state.kickVote.votesYes.add(state.playerId);
+            } else {
+                state.kickVote.votesNo.add(state.playerId);
+            }
+            const totalVoters = state.players.length - 1;
+            const totalVotes = state.kickVote.votesYes.size + state.kickVote.votesNo.size;
+            if (totalVotes >= totalVoters) {
+                endKickVote();
+            }
+        }
+    } else {
+        sendToHost({ type: 'cast-kick-vote', playerId: state.playerId, vote: vote });
+    }
+}
+
+// Make initiateKickVote available globally
+window.initiateKickVote = initiateKickVote;
 
 function showToast(message, type = 'info') {
     const toast = document.createElement('div');

@@ -878,7 +878,7 @@ input[type="text"]:focus {
     flex: 1;
     display: grid;
     grid-template-columns: 200px 1fr 280px;
-    gap: 15px;
+    gap: 8px;
     min-height: 0;
 }
 
@@ -947,6 +947,39 @@ input[type="text"]:focus {
 
 .game-players-list li .status-icon {
     font-size: 1rem;
+}
+
+.kick-btn {
+    padding: 4px 8px;
+    background: rgba(255, 71, 87, 0.2);
+    border: 1px solid rgba(255, 71, 87, 0.5);
+    border-radius: 4px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    opacity: 0;
+    transition: all var(--transition-fast);
+}
+
+.game-players-list li:hover .kick-btn {
+    opacity: 1;
+}
+
+.kick-btn:hover {
+    background: rgba(255, 71, 87, 0.4);
+}
+
+.btn-danger {
+    background: linear-gradient(135deg, #ff4757, #ff6b81);
+    color: white;
+}
+
+.btn-danger:hover {
+    background: linear-gradient(135deg, #ff6b81, #ff4757);
+}
+
+.btn-secondary {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid var(--glass-border);
 }
 
 /* Canvas Area */
