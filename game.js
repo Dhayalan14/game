@@ -482,6 +482,39 @@ function initPeer(peerId = null) {
             handleNewConnection(conn);
         });
     });
+});
+}
+
+function connectToHost(hostId) {
+    return new Promise((resolve, reject) => {
+        const conn = state.peer.connect(hostId, { reliable: true });
+
+        const timeout = setTimeout(() => {
+            conn.close();
+            reject(new Error('Connection timed out. Room might not exist.'));
+        }, 5000);
+
+        conn.on('open', () => {
+            clearTimeout(timeout);
+            console.log('Connected to host:', hostId);
+            state.connections.set(hostId, conn);
+            resolve(conn);
+        });
+
+        conn.on('error', (err) => {
+            clearTimeout(timeout);
+            reject(err);
+        });
+
+        // Handle immediate closure (e.g. host invalid)
+        conn.on('close', () => {
+            clearTimeout(timeout);
+            // If never opened, this helps catch it
+            if (!state.connections.has(hostId)) {
+                reject(new Error('Connection failed/closed immediately'));
+            }
+        });
+    });
 }
 
 function handleNewConnection(conn) {
