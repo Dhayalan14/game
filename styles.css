@@ -959,6 +959,7 @@ input[type="text"]:focus {
 #drawing-canvas {
     width: 100%;
     flex: 1;
+    max-height: 90%;
     background: #ffffff;
     border-radius: var(--radius-md);
     cursor: crosshair;

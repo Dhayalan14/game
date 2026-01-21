@@ -71,7 +71,8 @@ const state = {
     gameStarted: false,
     hostId: null,
     canvasHistory: [],
-    currentHint: ''
+    currentHint: '',
+    playersReady: new Set() // Track players who clicked Play Again
 };
 
 // ============================================
@@ -121,6 +122,7 @@ const elements = {
     // Tools
     colorBtns: document.querySelectorAll('.color-btn'),
     sizeBtns: document.querySelectorAll('.size-btn'),
+    brushBtn: document.getElementById('brush-btn'),
     eraserBtn: document.getElementById('eraser-btn'),
     fillBtn: document.getElementById('fill-btn'),
     undoBtn: document.getElementById('undo-btn'),
@@ -365,6 +367,10 @@ elements.colorBtns.forEach(btn => {
         drawing.isFilling = false;
         elements.eraserBtn.classList.remove('active');
         elements.fillBtn.classList.remove('active');
+        elements.brushBtn.classList.add('active');
+        // Update brush and fill button color indicators
+        elements.brushBtn.style.backgroundColor = drawing.color;
+        elements.fillBtn.style.backgroundColor = drawing.color;
     });
 });
 
@@ -376,17 +382,28 @@ elements.sizeBtns.forEach(btn => {
     });
 });
 
-elements.eraserBtn.addEventListener('click', () => {
-    drawing.isEraser = !drawing.isEraser;
+// Brush button - switch to brush mode
+elements.brushBtn.addEventListener('click', () => {
+    drawing.isEraser = false;
     drawing.isFilling = false;
-    elements.eraserBtn.classList.toggle('active');
+    elements.brushBtn.classList.add('active');
+    elements.eraserBtn.classList.remove('active');
+    elements.fillBtn.classList.remove('active');
+});
+
+elements.eraserBtn.addEventListener('click', () => {
+    drawing.isEraser = true;
+    drawing.isFilling = false;
+    elements.eraserBtn.classList.add('active');
+    elements.brushBtn.classList.remove('active');
     elements.fillBtn.classList.remove('active');
 });
 
 elements.fillBtn.addEventListener('click', () => {
-    drawing.isFilling = !drawing.isFilling;
+    drawing.isFilling = true;
     drawing.isEraser = false;
-    elements.fillBtn.classList.toggle('active');
+    elements.fillBtn.classList.add('active');
+    elements.brushBtn.classList.remove('active');
     elements.eraserBtn.classList.remove('active');
 });
 
@@ -1033,6 +1050,19 @@ function handleMessage(message, conn) {
             showFloatingReaction(message.reaction);
             if (state.isHost) {
                 broadcast(message, conn.peer);
+            }
+            break;
+
+        case 'player-ready':
+            if (state.isHost) {
+                state.playersReady.add(message.playerId);
+                addChatMessage(`${message.playerName} is ready!`, 'system');
+                broadcast({
+                    type: 'chat-broadcast',
+                    text: `${message.playerName} is ready!`,
+                    msgType: 'system'
+                });
+                updateReadyStatus();
             }
             break;
     }
@@ -1753,9 +1783,36 @@ elements.roomCodeInput.addEventListener('keypress', (e) => {
 // Play Again
 elements.playAgainBtn.addEventListener('click', () => {
     elements.gameEndModal.classList.remove('active');
-    showScreen('waiting-room');
-    elements.chatMessages.innerHTML = '';
+
+    if (state.isHost) {
+        // Host is ready
+        state.playersReady.add(state.playerId);
+        showScreen('waiting-room');
+        elements.chatMessages.innerHTML = '';
+        updateReadyStatus();
+    } else {
+        // Non-host sends ready message to host
+        sendToHost({ type: 'player-ready', playerId: state.playerId, playerName: state.playerName });
+        showScreen('waiting-room');
+        elements.chatMessages.innerHTML = '';
+        addChatMessage('Waiting for other players...', 'system');
+    }
 });
+
+// Update ready status in waiting room
+function updateReadyStatus() {
+    const readyCount = state.playersReady.size;
+    const totalPlayers = state.players.length;
+
+    if (readyCount < totalPlayers) {
+        elements.startGameBtn.disabled = true;
+        elements.startGameBtn.innerHTML = `<span class="btn-icon">⏳</span> Waiting (${readyCount}/${totalPlayers})`;
+    } else {
+        elements.startGameBtn.disabled = false;
+        elements.startGameBtn.innerHTML = '<span class="btn-icon">🎮</span> Start Game';
+        state.playersReady.clear(); // Reset for next game
+    }
+}
 
 // Warn before leaving
 window.addEventListener('beforeunload', (e) => {
