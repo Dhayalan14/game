@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Varaipadam - Draw & Guess with Friends!</title>
+    <meta name="description" content="Free multiplayer drawing and guessing game. Play with friends online!">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <!-- PeerJS for P2P connections -->
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+</head>
+
+<body>
+    <!-- Animated Background -->
+    <div class="bg-gradient"></div>
+    <div class="floating-shapes">
+        <div class="shape shape-1"></div>
+        <div class="shape shape-2"></div>
+        <div class="shape shape-3"></div>
+        <div class="shape shape-4"></div>
+    </div>
+
+    <!-- Lobby Screen -->
+    <div id="lobby-screen" class="screen active">
+        <div class="lobby-container">
+            <div class="logo">
+                <span class="logo-icon">🎨</span>
+                <h1>Varai<span class="logo-accent">padam</span></h1>
+                <p class="tagline">வரைபடம் - Draw & Guess!</p>
+                <span class="p2p-badge">🌐 Play Online with Friends</span>
+            </div>
+
+            <div class="glass-card">
+                <div class="input-group">
+                    <label for="player-name">Your Name</label>
+                    <input type="text" id="player-name" placeholder="Enter your name..." maxlength="15">
+                </div>
+
+                <div class="avatar-picker">
+                    <label>Choose Avatar Color</label>
+                    <div class="avatar-colors">
+                        <button class="avatar-color active" data-color="#6c5ce7" style="background: #6c5ce7;"></button>
+                        <button class="avatar-color" data-color="#00b894" style="background: #00b894;"></button>
+                        <button class="avatar-color" data-color="#e17055" style="background: #e17055;"></button>
+                        <button class="avatar-color" data-color="#fdcb6e" style="background: #fdcb6e;"></button>
+                        <button class="avatar-color" data-color="#0984e3" style="background: #0984e3;"></button>
+                        <button class="avatar-color" data-color="#e84393" style="background: #e84393;"></button>
+                    </div>
+                </div>
+
+                <div class="lobby-actions">
+                    <button id="create-room-btn" class="btn btn-primary">
+                        <span class="btn-icon">✨</span>
+                        Create Room
+                    </button>
+
+                    <div class="divider">
+                        <span>or</span>
+                    </div>
+
+                    <div class="join-section">
+                        <input type="text" id="room-code-input" placeholder="Enter room code..." maxlength="6">
+                        <button id="join-room-btn" class="btn btn-secondary">
+                            <span class="btn-icon">🚀</span>
+                            Join Room
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <p class="hosting-note">
+                💡 No download needed - just share the room code!
+            </p>
+        </div>
+    </div>
+
+    <!-- Waiting Room Screen -->
+    <div id="waiting-room-screen" class="screen">
+        <div class="waiting-container">
+            <div class="glass-card room-info-card">
+                <h2>Room Code</h2>
+                <div class="room-code-display">
+                    <span id="display-room-code">ABCD12</span>
+                    <button id="copy-code-btn" class="btn-icon-only" title="Copy code">📋</button>
+                </div>
+                <p class="share-text">Share this code with your friends!</p>
+            </div>
+
+            <!-- Game Settings (Host Only) -->
+            <div id="game-settings" class="glass-card settings-card" style="display: none;">
+                <h3>⚙️ Game Settings</h3>
+                <div class="settings-grid">
+                    <div class="setting-item">
+                        <label>Rounds per Player</label>
+                        <select id="rounds-select">
+                            <option value="1">1 round</option>
+                            <option value="2" selected>2 rounds</option>
+                            <option value="3">3 rounds</option>
+                        </select>
+                    </div>
+                    <div class="setting-item">
+                        <label>Draw Time</label>
+                        <select id="time-select">
+                            <option value="60">60 seconds</option>
+                            <option value="80" selected>80 seconds</option>
+                            <option value="100">100 seconds</option>
+                            <option value="120">120 seconds</option>
+                        </select>
+                    </div>
+                    <div class="setting-item">
+                        <label>Hints</label>
+                        <select id="hints-select">
+                            <option value="0">No hints</option>
+                            <option value="1" selected>1 hint</option>
+                            <option value="2">2 hints</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass-card players-card">
+                <h3>Players <span id="player-count">(1/8)</span></h3>
+                <ul id="players-list" class="players-list">
+                    <!-- Players will be added here -->
+                </ul>
+            </div>
+
+            <button id="start-game-btn" class="btn btn-primary btn-large" style="display: none;">
+                <span class="btn-icon">🎮</span>
+                Start Game
+            </button>
+
+            <button id="leave-room-btn" class="btn btn-ghost">
+                Leave Room
+            </button>
+        </div>
+    </div>
+
+    <!-- Game Screen -->
+    <div id="game-screen" class="screen">
+        <div class="game-container">
+            <!-- Game Header -->
+            <header class="game-header">
+                <div class="round-info">
+                    <span class="round-label">Round</span>
+                    <span id="round-display" class="round-number">1/6</span>
+                </div>
+                <div class="word-display">
+                    <span id="word-hint">_ _ _ _ _</span>
+                    <button id="hint-btn" class="hint-btn" style="display: none;" title="Get a hint">💡</button>
+                </div>
+                <div class="timer-container">
+                    <div id="timer-ring" class="timer-ring">
+                        <svg viewBox="0 0 100 100">
+                            <circle class="timer-bg" cx="50" cy="50" r="45"></circle>
+                            <circle id="timer-progress" class="timer-progress" cx="50" cy="50" r="45"></circle>
+                        </svg>
+                        <span id="timer-text" class="timer-text">80</span>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Main Game Area -->
+            <div class="game-main">
+                <!-- Player Sidebar -->
+                <aside class="player-sidebar glass-card">
+                    <h3>Players</h3>
+                    <ul id="game-players-list" class="game-players-list">
+                        <!-- Players with scores -->
+                    </ul>
+                </aside>
+
+                <!-- Canvas Area -->
+                <div class="canvas-area">
+                    <canvas id="drawing-canvas" width="800" height="600"></canvas>
+
+                    <!-- Drawing Tools (only visible for drawer) -->
+                    <div id="drawing-tools" class="drawing-tools" style="display: none;">
+                        <div class="tool-group colors">
+                            <button class="color-btn active" data-color="#000000" style="background: #000000;"></button>
+                            <button class="color-btn" data-color="#ffffff" style="background: #ffffff;"></button>
+                            <button class="color-btn" data-color="#ff4757" style="background: #ff4757;"></button>
+                            <button class="color-btn" data-color="#ff6b81" style="background: #ff6b81;"></button>
+                            <button class="color-btn" data-color="#ffa502" style="background: #ffa502;"></button>
+                            <button class="color-btn" data-color="#ffdd59" style="background: #ffdd59;"></button>
+                            <button class="color-btn" data-color="#2ed573" style="background: #2ed573;"></button>
+                            <button class="color-btn" data-color="#1e90ff" style="background: #1e90ff;"></button>
+                            <button class="color-btn" data-color="#5352ed" style="background: #5352ed;"></button>
+                            <button class="color-btn" data-color="#a55eea" style="background: #a55eea;"></button>
+                            <button class="color-btn" data-color="#8b4513" style="background: #8b4513;"></button>
+                            <button class="color-btn" data-color="#747d8c" style="background: #747d8c;"></button>
+                        </div>
+                        <div class="tool-group sizes">
+                            <button class="size-btn active" data-size="4"><span
+                                    style="width: 8px; height: 8px;"></span></button>
+                            <button class="size-btn" data-size="8"><span
+                                    style="width: 12px; height: 12px;"></span></button>
+                            <button class="size-btn" data-size="16"><span
+                                    style="width: 18px; height: 18px;"></span></button>
+                            <button class="size-btn" data-size="32"><span
+                                    style="width: 26px; height: 26px;"></span></button>
+                        </div>
+                        <div class="tool-group actions">
+                            <button id="eraser-btn" class="tool-btn" title="Eraser">🧹</button>
+                            <button id="fill-btn" class="tool-btn" title="Fill Bucket">🪣</button>
+                            <button id="undo-btn" class="tool-btn" title="Undo">↩️</button>
+                            <button id="clear-btn" class="tool-btn" title="Clear Canvas">🗑️</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Chat Area -->
+                <aside class="chat-area glass-card">
+                    <div id="chat-messages" class="chat-messages">
+                        <!-- Chat messages -->
+                    </div>
+                    <div class="chat-input-container">
+                        <input type="text" id="chat-input" placeholder="Type your guess..." maxlength="50">
+                        <button id="send-chat-btn" class="btn btn-primary btn-small">Send</button>
+                    </div>
+                    <!-- Quick Reactions -->
+                    <div class="reactions">
+                        <button class="reaction-btn" data-reaction="👍">👍</button>
+                        <button class="reaction-btn" data-reaction="😂">😂</button>
+                        <button class="reaction-btn" data-reaction="🔥">🔥</button>
+                        <button class="reaction-btn" data-reaction="👏">👏</button>
+                        <button class="reaction-btn" data-reaction="😮">😮</button>
+                    </div>
+                </aside>
+            </div>
+        </div>
+    </div>
+
+    <!-- Word Selection Modal -->
+    <div id="word-modal" class="modal">
+        <div class="modal-content glass-card">
+            <h2>Choose a word to draw!</h2>
+            <p class="word-difficulty-hint">Harder words = More points!</p>
+            <div id="word-options" class="word-options">
+                <!-- Word buttons -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Round End Overlay -->
+    <div id="round-overlay" class="overlay">
+        <div class="overlay-content glass-card">
+            <h2 id="overlay-title">Round Over!</h2>
+            <p id="overlay-word">The word was: <strong>apple</strong></p>
+            <div id="overlay-scores" class="overlay-scores">
+                <!-- Scores -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Game End Modal -->
+    <div id="game-end-modal" class="modal">
+        <div class="modal-content glass-card game-end-content">
+            <div class="confetti"></div>
+            <h2>🏆 Game Over! 🏆</h2>
+            <div id="final-rankings" class="final-rankings">
+                <!-- Rankings -->
+            </div>
+            <button id="play-again-btn" class="btn btn-primary btn-large">Play Again</button>
+        </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <!-- Sound Effects (using Web Audio API) -->
+    <script src="sounds.js"></script>
+    <script src="game.js"></script>
+</body>
+
+</html>
