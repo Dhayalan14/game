@@ -1435,9 +1435,8 @@ function escapeHtml(text) {
 
 function showWordSelection(words) {
     elements.wordOptions.innerHTML = words.map(w => `
-        <button class="${w.difficulty}" onclick="selectWord('${w.word}', '${w.difficulty}')">
+        <button onclick="selectWord('${w.word}')">
             ${w.word}
-            <span class="difficulty-label">${w.difficulty === 'easy' ? '🟢 Easy' : w.difficulty === 'medium' ? '🟡 Medium' : '🔴 Hard'}</span>
         </button>
     `).join('');
     elements.wordModal.classList.add('active');
@@ -1447,11 +1446,11 @@ function hideWordSelection() {
     elements.wordModal.classList.remove('active');
 }
 
-function selectWord(word, difficulty) {
+function selectWord(word) {
     if (state.isHost) {
-        handleWordSelected(word, difficulty, state.playerId);
+        handleWordSelected(word, 'normal', state.playerId);
     } else {
-        sendToHost({ type: 'word-selected', word: word, difficulty: difficulty });
+        sendToHost({ type: 'word-selected', word: word, difficulty: 'normal' });
     }
     hideWordSelection();
 }
@@ -1710,7 +1709,7 @@ elements.startGameBtn.addEventListener('click', () => {
     showScreen('game');
     resizeCanvas();
     clearCanvas();
-    addChatMessage('🎮 Game started! Get ready...', 'system');
+
 
     setTimeout(() => startRound(), 1500);
 });
