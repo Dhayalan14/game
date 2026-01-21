@@ -1091,42 +1091,42 @@ function getRandomWords(count = null) {
     return words;
 }
 
-function createHint(word, revealCount = 0) {
-    const chars = word.split('');
-    const hint = chars.map((char, i) => {
-        if (char === ' ') return '  ';
-        if (revealCount > 0) {
-            // Reveal some letters
-            const revealIndices = [];
-            for (let j = 0; j < word.length; j++) {
-                if (word[j] !== ' ') revealIndices.push(j);
-            }
-            // Shuffle and take first N
-            for (let j = revealIndices.length - 1; j > 0; j--) {
-                const k = Math.floor(Math.random() * (j + 1));
-                [revealIndices[j], revealIndices[k]] = [revealIndices[k], revealIndices[j]];
-            }
-            const toReveal = revealIndices.slice(0, revealCount);
-            if (toReveal.includes(i)) return char.toUpperCase();
-        }
+function createHint(word) {
+    // Create initial hint with all underscores (spaces between each character)
+    return word.split('').map(char => {
+        if (char === ' ') return '  '; // Double space for word separators
         return '_';
-    });
-    return hint.join(' ');
+    }).join(' ');
 }
 
 function revealHint() {
     if (!state.isHost || !state.currentWord || state.hintsUsed >= state.hintsPerRound) return;
 
     state.hintsUsed++;
-    const hint = createHint(state.currentWord, state.hintsUsed);
-    state.currentHint = hint;
 
-    broadcast({ type: 'hint-reveal', hint: hint });
-    elements.wordHint.textContent = hint;
+    // Get current hint as array (split by space to get individual chars)
+    const hintParts = state.currentHint.split(' ');
+    const wordChars = state.currentWord.split('');
 
-    if (state.hintsUsed >= state.hintsPerRound) {
-        // All hints used
+    // Find indices that are still hidden (showing '_')
+    const hiddenIndices = [];
+    for (let i = 0; i < hintParts.length; i++) {
+        if (hintParts[i] === '_') {
+            hiddenIndices.push(i);
+        }
     }
+
+    // Reveal a random hidden letter
+    if (hiddenIndices.length > 0) {
+        const randomIndex = hiddenIndices[Math.floor(Math.random() * hiddenIndices.length)];
+        hintParts[randomIndex] = wordChars[randomIndex].toUpperCase();
+    }
+
+    const newHint = hintParts.join(' ');
+    state.currentHint = newHint;
+
+    broadcast({ type: 'hint-reveal', hint: newHint });
+    elements.wordHint.textContent = newHint;
 
     if (window.playSound) playSound('hint');
     addChatMessage('💡 A letter was revealed!', 'system');
@@ -1863,8 +1863,8 @@ window.addEventListener('load', async () => {
                     elements.displayRoomCode.textContent = roomCode;
                     elements.startGameBtn.style.display = 'none';
                     elements.gameSettings.style.display = 'none';
-                    showScreen('waiting-room');
-                    showToast('Reconnected!', 'success');
+                    // Don't show screen here - let sync-state determine if it's game or waiting room
+                    showToast('Reconnected! Syncing...', 'success');
                 } catch (joinErr) {
                     console.log('Auto-rejoin failed, room may no longer exist:', joinErr);
                     showToast('Room no longer exists. Create or join a new room.', 'error');
