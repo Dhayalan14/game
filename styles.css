@@ -1345,7 +1345,7 @@ input[type="text"]:focus {
 
     .chat-area {
         order: 3;
-        max-height: 200px;
+        max-height: 350px;
     }
 
     .game-players-list {
