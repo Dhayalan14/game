@@ -42,9 +42,6 @@ const WORDS = {
 // ============================================
 // GAME STATE
 // ============================================
-// ============================================
-// GAME STATE
-// ============================================
 const state = {
     peer: null,
     connections: new Map(),
@@ -702,34 +699,6 @@ function resetState() {
     stopTimer();
     state.hintTimers.forEach(timer => clearTimeout(timer));
     state.hintTimers = [];
-}
-
-function connectToHost(hostId) {
-    return new Promise((resolve, reject) => {
-        const conn = state.peer.connect(hostId, { reliable: true });
-
-        conn.on('open', () => {
-            console.log('Connected to host:', hostId);
-            state.connections.set(hostId, conn);
-            state.hostId = hostId;
-            resolve(conn);
-        });
-
-        conn.on('data', (data) => {
-            handleMessage(data, conn);
-        });
-
-        conn.on('close', () => {
-            if (hostId === state.hostId) {
-                handleHostDisconnect();
-            }
-        });
-
-        conn.on('error', (err) => {
-            console.error('Connection error:', err);
-            reject(err);
-        });
-    });
 }
 
 function broadcast(message, excludePeerId = null) {
