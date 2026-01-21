@@ -531,6 +531,9 @@ function handlePlayerDisconnect(peerId) {
 
         state.players.splice(playerIndex, 1);
         updatePlayersList();
+        if (state.gameStarted) {
+            updateGamePlayersList(state.players[state.currentDrawerIndex]?.name);
+        }
         addChatMessage(`${player.name} disconnected (can rejoin)`, 'system');
 
         if (state.isHost) {
@@ -541,11 +544,15 @@ function handlePlayerDisconnect(peerId) {
             });
         }
 
+        if (playerIndex < state.currentDrawerIndex) {
+            state.currentDrawerIndex--;
+        }
+
         if (state.gameStarted && state.currentDrawerIndex === playerIndex && state.isHost) {
             addChatMessage('Drawer left, skipping to next round...', 'system');
             setTimeout(() => {
                 if (state.players.length >= 2) {
-                    state.currentDrawerIndex--;
+                    state.currentDrawerIndex--; // Will be incremented in startRound
                     startRound();
                 } else {
                     addChatMessage('Not enough players to continue', 'system');
@@ -562,6 +569,8 @@ function handlePlayerDisconnect(peerId) {
 
 function handleHostDisconnect() {
     stopTimer();
+    state.hintTimers.forEach(timer => clearTimeout(timer));
+    state.hintTimers = [];
     showToast('Host disconnected!', 'error');
 
     const shouldBecomeHost = confirm(
@@ -1077,7 +1086,7 @@ function startRound() {
 
     state.isDrawing = false;
     elements.drawingTools.style.display = 'none';
-    elements.hintBtn.style.display = state.hintsPerRound > 0 ? 'inline-block' : 'none';
+    elements.hintBtn.style.display = 'none'; // Automatic hints only
     elements.hintBtn.disabled = false;
     elements.wordHint.textContent = '???';
 }
@@ -1113,6 +1122,23 @@ function handleWordSelected(word, difficulty, drawerId) {
                 type: 'drawing-start',
                 word: state.currentWord
             });
+        }
+    }
+
+    // Clear any previous hint timers
+    state.hintTimers.forEach(timer => clearTimeout(timer));
+    state.hintTimers = [];
+
+    // Schedule automatic hints
+    if (state.hintsPerRound > 0) {
+        const interval = (state.roundTime * 1000) / (state.hintsPerRound + 1);
+        for (let i = 1; i <= state.hintsPerRound; i++) {
+            const timer = setTimeout(() => {
+                if (state.gameStarted && state.currentWord && state.roundStartTime) {
+                    revealHint();
+                }
+            }, interval * i);
+            state.hintTimers.push(timer);
         }
     }
 
