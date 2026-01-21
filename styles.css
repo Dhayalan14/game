@@ -1335,6 +1335,13 @@ input[type="text"]:focus {
         grid-template-rows: auto 1fr auto;
     }
 
+    .game-container {
+        height: auto;
+        min-height: 100vh;
+        padding-bottom: 150px;
+        /* Extra scrolling space */
+    }
+
     .player-sidebar {
         order: 1;
     }
