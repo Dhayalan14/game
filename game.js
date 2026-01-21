@@ -857,6 +857,10 @@ function handleMessage(message, conn) {
 
                 // If it's your turn, might need more sync logic here, but for now just showing screen
                 addChatMessage('Rejoined the game!', 'system');
+            } else {
+                // Game hasn't started yet, ensure we're on waiting room
+                showScreen('waiting-room');
+                elements.displayRoomCode.textContent = message.roomCode || state.roomCode;
             }
             break;
 
