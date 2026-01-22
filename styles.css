@@ -878,13 +878,13 @@ input[type="text"]:focus {
     flex: 1;
     display: grid;
     grid-template-columns: 200px 1fr 280px;
-    gap: 2px;
+    gap: 8px;
     min-height: 0;
 }
 
 /* Player Sidebar */
 .player-sidebar {
-    padding: 15px;
+    padding: 8px;
     overflow-y: auto;
 }
 

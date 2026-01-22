@@ -57,7 +57,8 @@ const state = {
     totalRounds: 6,
     roundTime: 80,
     roundsPerPlayer: 2,
-    wordChoices: 3,
+    wordChoices: 3, // Always 3 word choices
+    maxPlayers: 20, // Host can configure this
     hintsPerRound: 1,
     hintsUsed: 0,
     timerInterval: null,
@@ -102,7 +103,7 @@ const elements = {
     gameSettings: document.getElementById('game-settings'),
     roundsSelect: document.getElementById('rounds-select'),
     timeSelect: document.getElementById('time-select'),
-    wordChoicesSelect: document.getElementById('word-choices-select'),
+    maxPlayersSelect: document.getElementById('max-players-select'),
     hintsSelect: document.getElementById('hints-select'),
     startGameBtn: document.getElementById('start-game-btn'),
     leaveRoomBtn: document.getElementById('leave-room-btn'),
@@ -753,12 +754,20 @@ function handleMessage(message, conn) {
     switch (message.type) {
         case 'join-room':
             if (state.isHost) {
-                if (state.players.length >= 8) {
+                if (state.players.length >= state.maxPlayers) {
                     conn.send({ type: 'error', message: 'Room is full' });
                     return;
                 }
 
                 const lowerName = message.name.toLowerCase();
+
+                // Check if a player with the same name already exists (prevent duplicates)
+                const existingPlayer = state.players.find(p => p.name.toLowerCase() === lowerName);
+                if (existingPlayer) {
+                    conn.send({ type: 'error', message: 'A player with this name is already in the room' });
+                    return;
+                }
+
                 let previousScore = 0;
                 let previousColor = message.color;
                 let isReconnect = false;
@@ -961,9 +970,16 @@ function handleMessage(message, conn) {
             state.hintsUsed = 0;
             elements.drawingTools.style.display = 'none';
             elements.wordHint.textContent = '???';
+            // Hide word selection modal if visible (in case of timeout skip)
+            hideWordSelection();
             addChatMessage(`🎨 ${message.drawer} is drawing!`, 'system');
             elements.roundDisplay.textContent = `${message.round}/${message.totalRounds}`;
             updateGamePlayersList(message.drawer);
+            break;
+
+        case 'word-selection-timeout':
+            // Hide word selection modal if we were the slow picker
+            hideWordSelection();
             break;
 
         case 'word-hint':
@@ -1043,6 +1059,10 @@ function handleMessage(message, conn) {
         case 'close-guess':
             if (window.playSound) playSound('wrong');
             showToast("That's close! 🔥", 'warning');
+            break;
+
+        case 'answer-warning':
+            showToast("🤫 Don't spoil the answer!", 'warning');
             break;
 
         case 'word-selected':
@@ -1270,7 +1290,21 @@ function startRound() {
         return;
     }
 
-    state.currentDrawerIndex = (state.currentDrawerIndex + 1) % state.players.length;
+    // Random drawer selection - prevent same player from drawing twice in a row
+    const previousDrawerIndex = state.currentDrawerIndex;
+    let availableIndices = [];
+
+    for (let i = 0; i < state.players.length; i++) {
+        // Exclude the previous drawer (unless only 2 players)
+        if (i !== previousDrawerIndex || state.players.length === 2) {
+            availableIndices.push(i);
+        }
+    }
+
+    // Pick a random player from available indices
+    const randomIndex = Math.floor(Math.random() * availableIndices.length);
+    state.currentDrawerIndex = availableIndices[randomIndex];
+
     state.round++;
     state.guessedPlayers = new Set();
     state.currentWord = null;
@@ -1309,6 +1343,16 @@ function startRound() {
     }
     state.wordSelectionTimer = setTimeout(() => {
         if (state.gameStarted && !state.currentWord) {
+            // Notify the previous drawer to close their word selection modal
+            const prevDrawerConn = state.connections.get(drawer.id);
+            if (prevDrawerConn) {
+                prevDrawerConn.send({ type: 'word-selection-timeout' });
+            }
+            // If host was the drawer, hide locally
+            if (drawer.id === state.playerId) {
+                hideWordSelection();
+            }
+
             addChatMessage(`${drawer.name} took too long to choose! Skipping...`, 'system');
             broadcast({
                 type: 'chat-broadcast',
@@ -1334,6 +1378,19 @@ function handleWordSelected(word, difficulty, drawerId) {
     if (state.wordSelectionTimer) {
         clearTimeout(state.wordSelectionTimer);
         state.wordSelectionTimer = null;
+    }
+
+    // Validate that the word is being selected by the current drawer
+    const currentDrawer = state.players[state.currentDrawerIndex];
+    if (!currentDrawer || currentDrawer.id !== drawerId) {
+        console.log('Word selection rejected: not the current drawer');
+        return;
+    }
+
+    // Prevent duplicate word selection
+    if (state.currentWord) {
+        console.log('Word selection rejected: word already selected');
+        return;
     }
 
     state.currentWord = word.toLowerCase();
@@ -1412,7 +1469,33 @@ function processGuess(text, playerName, playerId) {
     const drawer = state.players[state.currentDrawerIndex];
 
     if (!drawer || playerId === drawer.id) return;
-    if (state.guessedPlayers.has(playerId)) return;
+
+    // Check if player already guessed
+    if (state.guessedPlayers.has(playerId)) {
+        // Player already guessed - check if they're trying to reveal the answer
+        if (guess === state.currentWord || guess.includes(state.currentWord) || state.currentWord.includes(guess)) {
+            // Send warning to the player - don't reveal the word!
+            const guesserConn = state.connections.get(playerId);
+            if (guesserConn) {
+                guesserConn.send({ type: 'answer-warning' });
+            }
+            // If it's the host who already guessed
+            if (playerId === state.playerId) {
+                showToast("🤫 Don't spoil the answer!", 'warning');
+            }
+            return; // Don't broadcast this message
+        }
+
+        // Allow normal messages from players who have guessed
+        broadcast({
+            type: 'chat-broadcast',
+            playerName: playerName,
+            text: text,
+            msgType: 'normal'
+        });
+        addChatMessage(text, 'normal', playerName);
+        return;
+    }
 
     if (guess === state.currentWord) {
         state.guessedPlayers.add(playerId);
@@ -1535,7 +1618,7 @@ function showScreen(screen) {
 }
 
 function updatePlayersList() {
-    elements.playerCount.textContent = `(${state.players.length}/8)`;
+    elements.playerCount.textContent = `(${state.players.length}/${state.maxPlayers})`;
     elements.playersList.innerHTML = state.players.map((player) => `
         <li>
             <div class="avatar" style="background: ${player.color}">${player.name.charAt(0).toUpperCase()}</div>
@@ -2011,7 +2094,7 @@ elements.startGameBtn.addEventListener('click', () => {
     // Get settings
     state.roundsPerPlayer = parseInt(elements.roundsSelect.value);
     state.roundTime = parseInt(elements.timeSelect.value);
-    state.wordChoices = parseInt(elements.wordChoicesSelect?.value || 3);
+    state.wordChoices = 3; // Always 3 word choices
     state.hintsPerRound = parseInt(elements.hintsSelect.value);
 
     state.gameStarted = true;
@@ -2118,6 +2201,12 @@ window.addEventListener('beforeunload', (e) => {
         e.returnValue = 'You are the host! Leaving will disconnect all players.';
         return e.returnValue;
     }
+});
+
+// Max Players setting change handler
+elements.maxPlayersSelect.addEventListener('change', () => {
+    state.maxPlayers = parseInt(elements.maxPlayersSelect.value);
+    updatePlayersList(); // Update the player count display
 });
 
 // Initialize
