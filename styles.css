@@ -1524,19 +1524,7 @@ input[type="text"]:focus {
         height: 300px;
     }
 
-    /* Input + reactions fixed when typing - ONLY for guessers, not drawer */
-    body:not(.drawing-active) .chat-controls:focus-within {
-        position: fixed;
-        top: 0px;
-        left: 10px;
-        right: 10px;
-        z-index: 100;
-        background: rgba(15, 15, 35, 0.95);
-        padding: 10px;
-        border-radius: var(--radius-md);
-        border: 1px solid var(--accent-primary);
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
-    }
+
 
     .game-players-list {
         display: flex;
