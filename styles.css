@@ -1514,10 +1514,10 @@ input[type="text"]:focus {
         height: 300px;
     }
 
-    /* Chat Overlay when typing */
-    .chat-area:focus-within {
+    /* Chat Overlay when typing - ONLY for guessers, not drawer */
+    body:not(.drawing-active) .chat-area:focus-within {
         position: fixed;
-        top: 500px;
+        top: 250px;
         left: 0;
         right: 0;
         height: auto;
