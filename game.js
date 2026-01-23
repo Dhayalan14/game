@@ -361,19 +361,46 @@ window.addEventListener('resize', resizeCanvas);
 // ============================================
 // DRAWING TOOLS
 // ============================================
+
+// Helper function to update tool button states
+function updateToolButtonStates() {
+    // Remove active from all tool buttons
+    elements.brushBtn.classList.remove('active');
+    elements.eraserBtn.classList.remove('active');
+    elements.fillBtn.classList.remove('active');
+
+    // Reset all tool button backgrounds
+    elements.brushBtn.style.backgroundColor = '';
+    elements.fillBtn.style.backgroundColor = '';
+    elements.eraserBtn.style.backgroundColor = '';
+
+    // Set active state based on current tool
+    if (drawing.isEraser) {
+        elements.eraserBtn.classList.add('active');
+        elements.eraserBtn.style.backgroundColor = 'rgba(255, 255, 255, 0.3)';
+    } else if (drawing.isFilling) {
+        elements.fillBtn.classList.add('active');
+        elements.fillBtn.style.backgroundColor = drawing.color;
+    } else {
+        // Brush mode
+        elements.brushBtn.classList.add('active');
+        elements.brushBtn.style.backgroundColor = drawing.color;
+    }
+}
+
 elements.colorBtns.forEach(btn => {
     btn.addEventListener('click', () => {
         elements.colorBtns.forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         drawing.color = btn.dataset.color;
-        drawing.isEraser = false;
-        drawing.isFilling = false;
-        elements.eraserBtn.classList.remove('active');
-        elements.fillBtn.classList.remove('active');
-        elements.brushBtn.classList.add('active');
-        // Update brush and fill button color indicators
-        elements.brushBtn.style.backgroundColor = drawing.color;
-        elements.fillBtn.style.backgroundColor = drawing.color;
+
+        // If eraser was active, switch to brush when selecting a color
+        if (drawing.isEraser) {
+            drawing.isEraser = false;
+        }
+
+        // Update tool button visual state
+        updateToolButtonStates();
     });
 });
 
@@ -389,25 +416,19 @@ elements.sizeBtns.forEach(btn => {
 elements.brushBtn.addEventListener('click', () => {
     drawing.isEraser = false;
     drawing.isFilling = false;
-    elements.brushBtn.classList.add('active');
-    elements.eraserBtn.classList.remove('active');
-    elements.fillBtn.classList.remove('active');
+    updateToolButtonStates();
 });
 
 elements.eraserBtn.addEventListener('click', () => {
     drawing.isEraser = true;
     drawing.isFilling = false;
-    elements.eraserBtn.classList.add('active');
-    elements.brushBtn.classList.remove('active');
-    elements.fillBtn.classList.remove('active');
+    updateToolButtonStates();
 });
 
 elements.fillBtn.addEventListener('click', () => {
     drawing.isFilling = true;
     drawing.isEraser = false;
-    elements.fillBtn.classList.add('active');
-    elements.brushBtn.classList.remove('active');
-    elements.eraserBtn.classList.remove('active');
+    updateToolButtonStates();
 });
 
 elements.undoBtn.addEventListener('click', () => {
@@ -1142,7 +1163,8 @@ function handleMessage(message, conn) {
                     type: 'kick-vote-started',
                     targetName: target.name,
                     targetId: message.targetId,
-                    initiatorName: message.initiatorName
+                    initiatorName: message.initiatorName,
+                    initiatorId: message.initiatorId
                 });
 
                 addChatMessage(`🗳️ Vote to kick ${target.name} started by ${message.initiatorName}`, 'system');
@@ -1173,28 +1195,53 @@ function handleMessage(message, conn) {
                 if (totalVotes >= totalVoters) {
                     endKickVote();
                 } else {
-                    // Broadcast vote count update
+                    // Broadcast vote count update with voter IDs for state sync
                     broadcast({
                         type: 'kick-vote-update',
                         votesYes: state.kickVote.votesYes.size,
                         votesNo: state.kickVote.votesNo.size,
+                        votesYesIds: Array.from(state.kickVote.votesYes),
+                        votesNoIds: Array.from(state.kickVote.votesNo),
                         needed: Math.ceil(totalVoters / 2) + 1
                     });
+                    // Also update host's player list
+                    if (state.gameStarted) {
+                        updateGamePlayersList(state.players[state.currentDrawerIndex]?.name);
+                    }
                 }
             }
             break;
 
         case 'kick-vote-started':
-            showKickVoteModal(message.targetName, message.targetId, message.initiatorName);
+            // Sync kick vote state
+            state.kickVote = {
+                targetId: message.targetId,
+                targetName: message.targetName,
+                votesYes: new Set([message.initiatorId]),
+                votesNo: new Set(),
+                startTime: Date.now()
+            };
             addChatMessage(`🗳️ Vote to kick ${message.targetName} started by ${message.initiatorName}`, 'system');
+            // Refresh player list to show inline indicator
+            if (state.gameStarted) {
+                updateGamePlayersList(state.players[state.currentDrawerIndex]?.name);
+            }
             break;
 
         case 'kick-vote-update':
-            updateKickVoteDisplay(message.votesYes, message.votesNo, message.needed);
+            // Sync vote counts
+            if (state.kickVote) {
+                state.kickVote.votesYes = new Set(message.votesYesIds || []);
+                state.kickVote.votesNo = new Set(message.votesNoIds || []);
+            }
+            // Refresh player list to update indicator
+            if (state.gameStarted) {
+                updateGamePlayersList(state.players[state.currentDrawerIndex]?.name);
+            }
             break;
 
         case 'kick-vote-result':
-            hideKickVoteModal();
+            state.kickVote = null;
             if (message.kicked) {
                 addChatMessage(`❌ ${message.targetName} was kicked!`, 'system');
                 if (message.targetId === state.playerId) {
@@ -1639,16 +1686,47 @@ function updateGamePlayersList(drawer) {
     elements.gamePlayersList.innerHTML = sortedPlayers.map((player, index) => {
         const isMe = player.id === state.playerId;
         const canKick = !isMe && !player.isHost && state.players.length > 2;
+        const isBeingKicked = state.kickVote && state.kickVote.targetId === player.id;
+        const hasVoted = state.kickVote && (state.kickVote.votesYes.has(state.playerId) || state.kickVote.votesNo.has(state.playerId));
+        const isVoteTarget = state.kickVote && state.kickVote.targetId === player.id;
+        const totalVoters = state.players.length - 1;
+        const needed = Math.ceil(totalVoters / 2) + 1;
+
+        // Build kick vote indicator
+        let kickVoteIndicator = '';
+        if (isBeingKicked) {
+            const yesVotes = state.kickVote.votesYes.size;
+            kickVoteIndicator = `<span class="kick-vote-indicator">${yesVotes}/${needed}</span>`;
+        }
+
+        // Build inline vote buttons (show to everyone except target and those who already voted)
+        let voteButtons = '';
+        if (state.kickVote && !isMe && state.kickVote.targetId !== state.playerId && !hasVoted) {
+            if (isVoteTarget) {
+                voteButtons = `
+                    <div class="inline-vote-btns">
+                        <button class="vote-yes-btn" onclick="castKickVote('yes')" title="Vote to kick">👎</button>
+                        <button class="vote-no-btn" onclick="castKickVote('no')" title="Vote to keep">👍</button>
+                    </div>
+                `;
+            }
+        }
+
         return `
-        <li class="${player.name === drawer ? 'drawing' : ''}">
+        <li class="${player.name === drawer ? 'drawing' : ''} ${isBeingKicked ? 'being-kicked' : ''}">
             <span class="rank" style="background: ${player.color}">${index + 1}</span>
-            <span class="name">${player.name}</span>
+            <span class="name ${isBeingKicked ? 'kick-target' : ''}">${player.name}</span>
+            ${kickVoteIndicator}
             <span class="score">${player.score || 0}</span>
             ${player.name === drawer ? '<span class="status-icon">🎨</span>' : ''}
-            ${canKick ? `<button class="kick-btn" onclick="initiateKickVote('${player.id}', '${player.name}')" title="Vote to kick">🚫</button>` : ''}
+            ${voteButtons}
+            ${canKick && !state.kickVote ? `<button class="kick-btn" onclick="initiateKickVote('${player.id}', '${player.name}')" title="Vote to kick">🚫</button>` : ''}
         </li>
     `}).join('');
 }
+
+// Make castKickVote globally accessible
+window.castKickVote = castKickVote;
 
 function updateScores() {
     const drawerName = state.players[state.currentDrawerIndex]?.name;
@@ -1757,11 +1835,16 @@ function initiateKickVote(targetId, targetName) {
             type: 'kick-vote-started',
             targetName: targetName,
             targetId: targetId,
-            initiatorName: state.playerName
+            initiatorName: state.playerName,
+            initiatorId: state.playerId
         });
 
         addChatMessage(`🗳️ Vote to kick ${targetName} started`, 'system');
-        showKickVoteModal(targetName, targetId, state.playerName);
+
+        // Refresh player list to show inline indicator
+        if (state.gameStarted) {
+            updateGamePlayersList(state.players[state.currentDrawerIndex]?.name);
+        }
 
         setTimeout(() => {
             if (state.kickVote && state.kickVote.targetId === targetId) {
@@ -1807,18 +1890,18 @@ function endKickVote() {
     });
 
     addChatMessage(kicked ? `❌ ${state.kickVote.targetName} was kicked!` : `✅ ${state.kickVote.targetName} was not kicked`, 'system');
-    hideKickVoteModal();
+
+    state.kickVote = null;
+
     updatePlayersList();
     if (state.gameStarted) {
         updateGamePlayersList(state.players[state.currentDrawerIndex]?.name);
     }
-
-    state.kickVote = null;
 }
 
-function showKickVoteModal(targetName, targetId, initiatorName) {
-    // Don't show vote UI to the target player
-    if (targetId === state.playerId) return;
+function showKickVoteModal(targetName, targetId, initiatorName, initiatorId) {
+    // Don't show vote UI to the target player or the initiator (they already voted)
+    if (targetId === state.playerId || initiatorId === state.playerId) return;
 
     let modal = document.getElementById('kick-vote-modal');
     if (!modal) {
@@ -1860,6 +1943,11 @@ function hideKickVoteModal() {
     const modal = document.getElementById('kick-vote-modal');
     if (modal) {
         modal.classList.remove('active');
+        // Reset button states for next vote
+        const yesBtn = document.getElementById('kick-vote-yes');
+        const noBtn = document.getElementById('kick-vote-no');
+        if (yesBtn) yesBtn.disabled = false;
+        if (noBtn) noBtn.disabled = false;
     }
 }
 
@@ -2246,7 +2334,6 @@ window.addEventListener('load', async () => {
                     elements.displayRoomCode.textContent = roomCode;
                     elements.startGameBtn.style.display = 'none';
                     elements.gameSettings.style.display = 'none';
-                    // Don't show screen here - let sync-state determine if it's game or waiting room
                     showToast('Reconnected! Syncing...', 'success');
                 } catch (joinErr) {
                     console.log('Auto-rejoin failed, room may no longer exist:', joinErr);
@@ -2262,3 +2349,4 @@ window.addEventListener('load', async () => {
 });
 
 console.log('🎨 Varaipadam loaded! வரைபடம்');
+console.log('FOLLOW PANRIYAA DAA BODY SODAA...🤖');

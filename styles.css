@@ -986,13 +986,13 @@ input[type="text"]:focus {
 .canvas-area {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 15px;
 }
 
 #drawing-canvas {
     width: 100%;
     flex: 1;
-    max-height: 90%;
+    max-height: 80%;
     background: #ffffff;
     border-radius: var(--radius-md);
     cursor: crosshair;
@@ -1072,20 +1072,34 @@ input[type="text"]:focus {
     width: 40px;
     height: 40px;
     border-radius: var(--radius-sm);
-    border: 1px solid var(--glass-border);
+    border: 2px solid var(--glass-border);
     background: var(--glass-bg);
     cursor: pointer;
     font-size: 1.1rem;
     transition: all var(--transition-fast);
+    position: relative;
 }
 
 .tool-btn:hover {
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.15);
+    transform: scale(1.05);
 }
 
 .tool-btn.active {
-    background: rgba(108, 92, 231, 0.3);
     border-color: var(--accent-primary);
+    box-shadow: 0 0 0 3px rgba(108, 92, 231, 0.4), 0 0 15px rgba(108, 92, 231, 0.3);
+    transform: scale(1.1);
+}
+
+/* Tool-specific active states */
+#brush-btn.active,
+#fill-btn.active {
+    border-width: 3px;
+}
+
+#eraser-btn.active {
+    border-color: var(--text-primary);
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.3), 0 0 15px rgba(255, 255, 255, 0.2);
 }
 
 /* Chat Area */
@@ -1424,4 +1438,111 @@ input[type="text"]:focus {
     .drawing-tools {
         flex-wrap: wrap;
     }
+}
+
+/* ============================================
+   KICK VOTE INLINE INDICATOR
+   ============================================ */
+.game-players-list li.being-kicked {
+    background: rgba(231, 76, 60, 0.15);
+    border: 1px solid rgba(231, 76, 60, 0.4);
+    animation: kickPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes kickPulse {
+
+    0%,
+    100% {
+        background: rgba(231, 76, 60, 0.15);
+    }
+
+    50% {
+        background: rgba(231, 76, 60, 0.25);
+    }
+}
+
+.game-players-list .name.kick-target {
+    color: var(--danger);
+    font-weight: 700;
+}
+
+.kick-vote-indicator {
+    background: var(--danger);
+    color: white;
+    padding: 2px 8px;
+    border-radius: var(--radius-sm);
+    font-size: 0.75rem;
+    font-weight: 700;
+    margin-left: 8px;
+    animation: voteGlow 1s ease-in-out infinite;
+}
+
+@keyframes voteGlow {
+
+    0%,
+    100% {
+        box-shadow: 0 0 5px rgba(231, 76, 60, 0.5);
+    }
+
+    50% {
+        box-shadow: 0 0 15px rgba(231, 76, 60, 0.8);
+    }
+}
+
+.inline-vote-btns {
+    display: flex;
+    gap: 5px;
+    margin-left: auto;
+}
+
+.inline-vote-btns button {
+    width: 28px;
+    height: 28px;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all var(--transition-fast);
+}
+
+.vote-yes-btn {
+    background: rgba(231, 76, 60, 0.3);
+    border: 1px solid var(--danger) !important;
+}
+
+.vote-yes-btn:hover {
+    background: var(--danger);
+    transform: scale(1.1);
+}
+
+.vote-no-btn {
+    background: rgba(0, 184, 148, 0.3);
+    border: 1px solid var(--success) !important;
+}
+
+.vote-no-btn:hover {
+    background: var(--success);
+    transform: scale(1.1);
+}
+
+.kick-btn {
+    width: 24px;
+    height: 24px;
+    border: none;
+    background: rgba(231, 76, 60, 0.2);
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 0.75rem;
+    transition: all var(--transition-fast);
+    opacity: 0;
+    margin-left: auto;
+}
+
+.game-players-list li:hover .kick-btn {
+    opacity: 1;
+}
+
+.kick-btn:hover {
+    background: var(--danger);
+    transform: scale(1.1);
 }
