@@ -462,7 +462,7 @@ function generateRoomCode() {
 
 function initPeer(peerId = null) {
     return new Promise((resolve, reject) => {
-        state.peer = new Peer(peerId, { debug: 1 });
+        state.peer = new Peer(peerId, { debug: 0 });
 
         state.peer.on('open', (id) => {
             console.log('Connected to PeerJS server with ID:', id);
@@ -497,7 +497,7 @@ function connectToHost(hostId) {
             cleanup();
             conn.close();
             reject(new Error('Connection timed out. Host not responding.'));
-        }, 10000);
+        }, 5000);
 
         // Listen for peer-unavailable on the main peer object
         const peerErrorListener = (err) => {

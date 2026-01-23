@@ -1517,7 +1517,7 @@ input[type="text"]:focus {
     /* Input + reactions fixed when typing - ONLY for guessers, not drawer */
     body:not(.drawing-active) .chat-controls:focus-within {
         position: fixed;
-        top: 200px;
+        top: 0px;
         left: 10px;
         right: 10px;
         z-index: 100;
