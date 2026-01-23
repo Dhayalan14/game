@@ -1514,20 +1514,18 @@ input[type="text"]:focus {
         height: 300px;
     }
 
-    /* Chat Overlay when typing - ONLY for guessers, not drawer */
-    body:not(.drawing-active) .chat-area:focus-within {
+    /* Only move input area when typing - ONLY for guessers, not drawer */
+    body:not(.drawing-active) .chat-input-container:focus-within {
         position: fixed;
         top: 200px;
-        left: 0;
-        right: 0;
-        height: auto;
-        max-height: 50vh;
+        left: 10px;
+        right: 10px;
         z-index: 100;
-        background: rgba(15, 15, 35, 0.3);
-        backdrop-filter: none;
-        border-bottom: 1px solid var(--accent-primary);
-        border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+        background: rgba(15, 15, 35, 0.9);
         padding: 10px;
+        border-radius: var(--radius-md);
+        border: 1px solid var(--accent-primary);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
     }
 
     .game-players-list {
