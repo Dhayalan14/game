@@ -1514,14 +1514,14 @@ input[type="text"]:focus {
         height: 300px;
     }
 
-    /* Only move input area when typing - ONLY for guessers, not drawer */
-    body:not(.drawing-active) .chat-input-container:focus-within {
+    /* Input + reactions fixed when typing - ONLY for guessers, not drawer */
+    body:not(.drawing-active) .chat-controls:focus-within {
         position: fixed;
         top: 200px;
         left: 10px;
         right: 10px;
         z-index: 100;
-        background: rgba(15, 15, 35, 0.9);
+        background: rgba(15, 15, 35, 0.95);
         padding: 10px;
         border-radius: var(--radius-md);
         border: 1px solid var(--accent-primary);
