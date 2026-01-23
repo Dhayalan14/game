@@ -13,7 +13,7 @@ const state = {
     roomCode: null,
     playerName: null,
     playerId: null,
-    playerColor: '#6c5ce7',
+    playerAvatar: '1.jpg',
     isHost: false,
     isDrawing: false,
     currentWord: null,
@@ -56,7 +56,7 @@ const elements = {
 
     // Lobby
     playerNameInput: document.getElementById('player-name'),
-    avatarColors: document.querySelectorAll('.avatar-color'),
+    avatarImages: document.querySelectorAll('.avatar-image'),
     customRoomCodeInput: document.getElementById('custom-room-code'),
     createRoomBtn: document.getElementById('create-room-btn'),
     roomCodeInput: document.getElementById('room-code-input'),
@@ -408,13 +408,13 @@ elements.clearBtn.addEventListener('click', () => {
 });
 
 // ============================================
-// AVATAR COLOR PICKER
+// AVATAR IMAGE PICKER
 // ============================================
-elements.avatarColors.forEach(btn => {
+elements.avatarImages.forEach(btn => {
     btn.addEventListener('click', () => {
-        elements.avatarColors.forEach(b => b.classList.remove('active'));
+        elements.avatarImages.forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
-        state.playerColor = btn.dataset.color;
+        state.playerAvatar = btn.dataset.avatar;
     });
 });
 
@@ -585,7 +585,7 @@ function handlePlayerDisconnect(peerId) {
 
         state.disconnectedPlayers.set(player.name.toLowerCase(), {
             score: player.score,
-            color: player.color,
+            avatar: player.avatar,
             timestamp: Date.now()
         });
 
@@ -666,7 +666,7 @@ async function becomeNewHost() {
         state.players = [{
             id: state.playerId,
             name: state.playerName,
-            color: state.playerColor,
+            avatar: state.playerAvatar,
             score: savedPlayers.find(p => p.name === state.playerName)?.score || 0,
             isHost: true
         }];
@@ -675,7 +675,7 @@ async function becomeNewHost() {
             if (p.name !== state.playerName) {
                 state.disconnectedPlayers.set(p.name.toLowerCase(), {
                     score: p.score,
-                    color: p.color,
+                    avatar: p.avatar,
                     timestamp: Date.now()
                 });
             }
@@ -703,6 +703,7 @@ function resetState() {
     state.roomCode = null;
     state.isHost = false;
     state.isDrawing = false;
+    document.body.classList.remove('drawing-active');
     state.currentWord = null;
     state.players = [];
     state.round = 0;
@@ -757,14 +758,14 @@ function handleMessage(message, conn) {
                 }
 
                 let previousScore = 0;
-                let previousColor = message.color;
+                let previousAvatar = message.avatar;
                 let isReconnect = false;
 
                 if (state.disconnectedPlayers.has(lowerName)) {
                     const oldData = state.disconnectedPlayers.get(lowerName);
                     if (Date.now() - oldData.timestamp < 10 * 60 * 1000) {
                         previousScore = oldData.score;
-                        previousColor = oldData.color;
+                        previousAvatar = oldData.avatar;
                         isReconnect = true;
                         state.disconnectedPlayers.delete(lowerName);
                     }
@@ -773,7 +774,7 @@ function handleMessage(message, conn) {
                 const newPlayer = {
                     id: conn.peer,
                     name: message.name,
-                    color: previousColor,
+                    avatar: previousAvatar,
                     score: previousScore,
                     isHost: false
                 };
@@ -840,7 +841,7 @@ function handleMessage(message, conn) {
                 state.players.push({
                     id: state.playerId,
                     name: state.playerName,
-                    color: state.playerColor,
+                    avatar: state.playerAvatar,
                     score: message.yourScore || 0,
                     isHost: false
                 });
@@ -851,7 +852,7 @@ function handleMessage(message, conn) {
                 state.players.push({
                     id: state.playerId,
                     name: state.playerName,
-                    color: state.playerColor,
+                    avatar: state.playerAvatar,
                     score: message.yourScore || 0,
                     isHost: false
                 });
@@ -954,6 +955,7 @@ function handleMessage(message, conn) {
 
         case 'round-start':
             state.isDrawing = false;
+            document.body.classList.remove('drawing-active');
             state.round = message.round;
             state.currentDrawerIndex = message.drawerIndex;
             state.hintsUsed = 0;
@@ -987,6 +989,7 @@ function handleMessage(message, conn) {
 
         case 'drawing-start':
             state.isDrawing = true;
+            document.body.classList.add('drawing-active');
             state.currentWord = message.word;
             state.canvasHistory = [];
             elements.drawingTools.style.display = 'flex';
@@ -1077,6 +1080,7 @@ function handleMessage(message, conn) {
         case 'round-end':
             stopTimer();
             state.isDrawing = false;
+            document.body.classList.remove('drawing-active');
             state.players = message.players;
             elements.drawingTools.style.display = 'none';
             if (window.playSound) playSound('roundEnd');
@@ -1389,6 +1393,7 @@ function startRound() {
     }, 20000);
 
     state.isDrawing = false;
+    document.body.classList.remove('drawing-active');
     elements.drawingTools.style.display = 'none';
     elements.wordHint.textContent = '???';
 }
@@ -1429,6 +1434,7 @@ function handleWordSelected(word, difficulty, drawerId) {
 
     if (drawerId === state.playerId) {
         state.isDrawing = true;
+        document.body.classList.add('drawing-active');
         state.canvasHistory = [];
         elements.drawingTools.style.display = 'flex';
         elements.wordHint.textContent = `${state.currentWord.toUpperCase()} (${state.currentWord.length})`;
@@ -1586,6 +1592,7 @@ function endRound(reason) {
 
     state.currentWord = null;
     state.isDrawing = false;
+    document.body.classList.remove('drawing-active');
     elements.drawingTools.style.display = 'none';
 
     if (state.round >= state.totalRounds) {
@@ -1603,7 +1610,7 @@ function endGame() {
         rank: i + 1,
         name: p.name,
         score: p.score,
-        color: p.color
+        avatar: p.avatar
     }));
 
     broadcast({ type: 'game-end', rankings: rankings });
@@ -1641,7 +1648,7 @@ function updatePlayersList() {
     elements.playerCount.textContent = `(${state.players.length}/${state.maxPlayers})`;
     elements.playersList.innerHTML = state.players.map((player) => `
         <li>
-            <div class="avatar" style="background: ${player.color}">${player.name.charAt(0).toUpperCase()}</div>
+            <div class="avatar"><img src="avatar/${player.avatar}" alt=""></div>
             <span class="name">${player.name}</span>
             ${player.isHost ? '<span class="host-badge">HOST</span>' : ''}
         </li>
@@ -1687,7 +1694,7 @@ function updateGamePlayersList(drawer) {
 
         return `
         <li class="${player.name === drawer ? 'drawing' : ''} ${isBeingKicked ? 'being-kicked' : ''}">
-            <span class="rank" style="background: ${player.color}">${index + 1}</span>
+            <span class="rank"><img src="avatar/${player.avatar}" alt="" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;"></span>
             <span class="name ${isBeingKicked ? 'kick-target' : ''}">${player.name}</span>
             ${kickVoteIndicator}
             <span class="score">${player.score || 0}</span>
@@ -1755,7 +1762,7 @@ function showRoundEnd(word, players) {
         .sort((a, b) => b.score - a.score)
         .map(p => `
             <div class="score-item">
-                <span style="color: ${p.color}">●</span>
+                <img src="avatar/${p.avatar}" alt="" style="width: 16px; height: 16px; border-radius: 50%;">
                 <span>${p.name}</span>
                 <span class="points">${p.score}</span>
             </div>
@@ -2065,7 +2072,7 @@ elements.createRoomBtn.addEventListener('click', async () => {
         state.players = [{
             id: state.playerId,
             name: name,
-            color: state.playerColor,
+            avatar: state.playerAvatar,
             score: 0,
             isHost: true
         }];
@@ -2132,14 +2139,14 @@ elements.joinRoomBtn.addEventListener('click', async () => {
         state.playerName = name;
         state.isHost = false;
 
-        conn.send({ type: 'join-room', name: name, color: state.playerColor });
+        conn.send({ type: 'join-room', name: name, avatar: state.playerAvatar });
 
         // Save session
         localStorage.setItem('skribbl_session', JSON.stringify({
             name: state.playerName,
             roomCode: state.roomCode,
             id: state.playerId,
-            color: state.playerColor
+            avatar: state.playerAvatar
         }));
 
         elements.displayRoomCode.textContent = code;
@@ -2322,7 +2329,7 @@ window.addEventListener('load', async () => {
                     state.playerName = name;
                     state.isHost = false;
 
-                    conn.send({ type: 'join-room', name: name, color: state.playerColor });
+                    conn.send({ type: 'join-room', name: name, avatar: state.playerAvatar });
 
                     elements.displayRoomCode.textContent = roomCode;
                     elements.startGameBtn.style.display = 'none';

@@ -40,14 +40,22 @@
                 </div>
 
                 <div class="avatar-picker">
-                    <label>Choose Avatar Color</label>
-                    <div class="avatar-colors">
-                        <button class="avatar-color active" data-color="#6c5ce7" style="background: #6c5ce7;"></button>
-                        <button class="avatar-color" data-color="#00b894" style="background: #00b894;"></button>
-                        <button class="avatar-color" data-color="#e17055" style="background: #e17055;"></button>
-                        <button class="avatar-color" data-color="#fdcb6e" style="background: #fdcb6e;"></button>
-                        <button class="avatar-color" data-color="#0984e3" style="background: #0984e3;"></button>
-                        <button class="avatar-color" data-color="#e84393" style="background: #e84393;"></button>
+                    <label>Choose Avatar</label>
+                    <div class="avatar-images">
+                        <button class="avatar-image active" data-avatar="1.jpg"><img src="avatar/1.jpg"
+                                alt="Avatar 1"></button>
+                        <button class="avatar-image" data-avatar="2.jpg"><img src="avatar/2.jpg"
+                                alt="Avatar 2"></button>
+                        <button class="avatar-image" data-avatar="3.jpg"><img src="avatar/3.jpg"
+                                alt="Avatar 3"></button>
+                        <button class="avatar-image" data-avatar="4.jpg"><img src="avatar/4.jpg"
+                                alt="Avatar 4"></button>
+                        <button class="avatar-image" data-avatar="5.jpg"><img src="avatar/5.jpg"
+                                alt="Avatar 5"></button>
+                        <button class="avatar-image" data-avatar="6.webp"><img src="avatar/6.webp"
+                                alt="Avatar 6"></button>
+                        <button class="avatar-image" data-avatar="7.webp"><img src="avatar/7.webp"
+                                alt="Avatar 7"></button>
                     </div>
                 </div>
 
@@ -71,7 +79,7 @@
 
                     <div class="join-section">
                         <input type="text" id="room-code-input" placeholder="ENTER ROOM CODE..." maxlength="6">
-                        <button id="join-room-btn" class="btn btn-secondary">
+                        <button id="join-room-btn" class="btn btn-primary">
                             <span class="btn-icon">🚀</span>
                             Join Room
                         </button>
@@ -159,7 +167,7 @@
             </div>
 
             <div class="glass-card players-card">
-                <h3>Players <span id="player-count">(1/8)</span></h3>
+                <h3><span id="player-count">(1/8)</span></h3>
                 <ul id="players-list" class="players-list">
                     <!-- Players will be added here -->
                 </ul>
