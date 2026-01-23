@@ -1507,6 +1507,16 @@ input[type="text"]:focus {
         order: 2;
         min-height: 400px;
         flex: 0 0 auto;
+        gap: 0;
+        /* Remove gap when tools hidden */
+    }
+
+    /* Collapse drawing tools space when hidden on mobile */
+    .drawing-tools[style*="display: none"] {
+        padding: 0 !important;
+        margin: 0 !important;
+        height: 0 !important;
+        min-height: 0 !important;
     }
 
     .chat-area {
