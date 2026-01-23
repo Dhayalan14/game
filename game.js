@@ -1,40 +1,7 @@
 // ============================================
 // WORD LIST (Combined)
 // ============================================
-const WORDS = [
-    // Simple words
-    "cat", "dog", "sun", "moon", "tree", "house", "car", "book", "fish", "bird",
-    "apple", "banana", "pizza", "cake", "ice cream", "cookie", "bread", "cheese",
-    "ball", "hat", "shoe", "shirt", "pants", "glasses", "watch", "ring",
-    "chair", "table", "bed", "lamp", "door", "window", "clock", "phone",
-    "star", "heart", "cloud", "rain", "snow", "fire", "water", "flower",
-    "baby", "king", "queen", "eye", "nose", "mouth", "hand", "foot",
-    "cup", "fork", "spoon", "plate", "bowl", "knife", "bottle", "glass",
-    "boat", "bus", "bike", "kite", "drum", "bell", "flag", "gift",
-    // Medium words
-    "airplane", "helicopter", "bicycle", "motorcycle", "train", "submarine",
-    "guitar", "piano", "drums", "violin", "microphone", "headphones",
-    "computer", "keyboard", "television", "camera", "robot", "rocket",
-    "umbrella", "backpack", "wallet", "suitcase", "envelope", "scissors",
-    "hamburger", "hotdog", "spaghetti", "pancake", "popcorn", "donut",
-    "penguin", "giraffe", "kangaroo", "octopus", "dolphin", "crocodile",
-    "astronaut", "pirate", "wizard", "ninja", "zombie", "vampire",
-    "diamond", "treasure", "castle", "bridge", "mountain", "volcano",
-    "rainbow", "tornado", "lightning", "snowman", "campfire", "waterfall",
-    "birthday", "wedding", "concert", "museum", "library", "hospital",
-    "butterfly", "ladybug", "dragonfly", "scorpion", "jellyfish", "starfish",
-    // Challenging words
-    "hibernation", "constellation", "photosynthesis", "camouflage", "ecosystem",
-    "democracy", "revolution", "imagination", "celebration", "adventure",
-    "skyscraper", "lighthouse", "treehouse", "greenhouse", "warehouse",
-    "nightmare", "daydream", "flashback", "time travel", "teleportation",
-    "fireworks", "chandelier", "kaleidoscope", "hologram", "reflection",
-    "acrobat", "magician", "archaeologist", "photographer", "firefighter",
-    "orchestra", "symphony", "choreography", "masterpiece", "sculpture",
-    "encryption", "algorithm", "artificial intelligence", "virtual reality",
-    "black hole", "solar system", "milky way", "supernova", "asteroid",
-    "bungee jumping", "paragliding", "scuba diving", "rock climbing"
-];
+// Words are now loaded from words.js (see index.html)
 
 // ============================================
 // GAME STATE
@@ -918,9 +885,10 @@ function handleMessage(message, conn) {
                     // This means a reconnecting drawer will see the HINT, not the WORD. 
                     // Fixing this requires the host to send the real word TO THE DRAWER specifically, or just accept this limitation for now.
                     // Let's just render what we have.
-                    elements.wordHint.textContent = `${state.currentHint} (${state.currentWordLength})`;
+                    // Let's just render what we have.
+                    updateWordHint(state.currentHint);
                 } else {
-                    elements.wordHint.textContent = `${state.currentHint} (${state.currentWordLength})`;
+                    updateWordHint(state.currentHint);
                 }
 
                 elements.roundDisplay.textContent = `${message.round}/${message.totalRounds}`;
@@ -990,7 +958,12 @@ function handleMessage(message, conn) {
             state.currentDrawerIndex = message.drawerIndex;
             state.hintsUsed = 0;
             elements.drawingTools.style.display = 'none';
-            elements.wordHint.textContent = '???';
+            if (message.hint) {
+                state.currentHint = message.hint;
+                updateWordHint(message.hint);
+            } else {
+                elements.wordHint.textContent = '???';
+            }
             // Hide word selection modal if visible (in case of timeout skip)
             hideWordSelection();
             addChatMessage(`🎨 ${message.drawer} is drawing!`, 'system');
@@ -1007,7 +980,7 @@ function handleMessage(message, conn) {
             state.currentHint = message.hint;
             state.currentWordLength = message.length;
             if (!state.isDrawing) {
-                elements.wordHint.textContent = `${message.hint} (${message.length})`;
+                updateWordHint(message.hint);
             }
             startTimer(state.roundTime);
             break;
@@ -1017,7 +990,7 @@ function handleMessage(message, conn) {
             state.currentWord = message.word;
             state.canvasHistory = [];
             elements.drawingTools.style.display = 'flex';
-            elements.wordHint.textContent = `${message.word.toUpperCase()} (${message.word.length})`;
+            updateWordHint(message.word, true);
             clearCanvas();
             hideWordSelection();
             startTimer(state.roundTime);
@@ -1095,7 +1068,7 @@ function handleMessage(message, conn) {
         case 'hint-reveal':
             state.currentHint = message.hint;
             if (!state.isDrawing) {
-                elements.wordHint.textContent = `${message.hint} (${state.currentWordLength})`;
+                updateWordHint(message.hint);
             }
             if (window.playSound) playSound('hint');
             addChatMessage('💡 A letter was revealed!', 'system');
@@ -1323,7 +1296,7 @@ function revealHint() {
 
     // Only update text content if we're not drawing (drawer sees full word)
     if (!state.isDrawing) {
-        elements.wordHint.textContent = `${newHint} (${state.currentWordLength})`;
+        updateWordHint(newHint);
     }
 
     if (window.playSound) playSound('hint');
@@ -1980,6 +1953,26 @@ function castKickVote(vote) {
 
 // Make initiateKickVote available globally
 window.initiateKickVote = initiateKickVote;
+
+// Helper to update word hint with per-word length
+function updateWordHint(text, isRaw = false) {
+    if (!text) return;
+
+    if (isRaw) {
+        // Drawer view: "Virtual Reality" -> "VIRTUAL (7)   REALITY (7)"
+        elements.wordHint.textContent = text.split(' ')
+            .map(w => `${w.toUpperCase()} (${w.length})`)
+            .join('   ');
+    } else {
+        // Guesser view: "_ _ _ _ _ _ _   _ _ _ _ _ _ _"
+        // Split by triple space (which separates words in our hint format)
+        const parts = text.split('   ');
+        elements.wordHint.textContent = parts.map(part => {
+            const count = part.replace(/ /g, '').length;
+            return `${part} (${count})`;
+        }).join('   ');
+    }
+}
 
 function showToast(message, type = 'info') {
     const toast = document.createElement('div');
