@@ -1517,16 +1517,16 @@ input[type="text"]:focus {
     /* Chat Overlay when typing */
     .chat-area:focus-within {
         position: absolute;
-        bottom: 0;
+        bottom: 300px;
+        /* Align with top of normal chat area */
         left: 0;
         right: 0;
-        height: 85%;
+        height: 40%;
         z-index: 100;
-        background: rgba(15, 15, 35, 0.4);
-        /* Use dark variable if possible, else hardcode for transparency */
+        background: rgba(15, 15, 35, 0.5);
         backdrop-filter: none;
-        /* Remove blur to see canvas */
         border-top: 1px solid var(--accent-primary);
+        border-radius: var(--radius-lg);
     }
 
     .game-players-list {
