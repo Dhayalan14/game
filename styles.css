@@ -1517,7 +1517,7 @@ input[type="text"]:focus {
     /* Chat Overlay when typing */
     .chat-area:focus-within {
         position: absolute;
-        bottom: 100px;
+        bottom: 0px;
         /* Align with top of normal chat area */
         left: 0;
         right: 0;
