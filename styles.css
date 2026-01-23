@@ -1511,8 +1511,9 @@ input[type="text"]:focus {
         /* Remove gap when tools hidden */
     }
 
-    /* Collapse drawing tools space when hidden on mobile */
-    .drawing-tools[style*="display: none"] {
+    /* Hide drawing tools completely for guessers on mobile */
+    body:not(.drawing-active) .drawing-tools {
+        display: none !important;
         padding: 0 !important;
         margin: 0 !important;
         height: 0 !important;
