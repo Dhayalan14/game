@@ -1517,13 +1517,13 @@ input[type="text"]:focus {
     /* Chat Overlay when typing */
     .chat-area:focus-within {
         position: fixed;
-        top: 0;
+        top: 500px;
         left: 0;
         right: 0;
         height: auto;
         max-height: 50vh;
         z-index: 100;
-        background: rgba(15, 15, 35, 0.4);
+        background: rgba(15, 15, 35, 0.3);
         backdrop-filter: none;
         border-bottom: 1px solid var(--accent-primary);
         border-radius: 0 0 var(--radius-lg) var(--radius-lg);
