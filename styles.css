@@ -880,6 +880,8 @@ input[type="text"]:focus {
     grid-template-columns: 200px 1fr 280px;
     gap: 8px;
     min-height: 0;
+    position: relative;
+    /* Context for absolute positioning */
 }
 
 /* Player Sidebar */
@@ -1409,7 +1411,22 @@ input[type="text"]:focus {
 
     .chat-area {
         order: 3;
-        height: 500px;
+        height: 300px;
+    }
+
+    /* Chat Overlay when typing */
+    .chat-area:focus-within {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 60%;
+        z-index: 100;
+        background: rgba(15, 15, 35, 0.7);
+        /* Use dark variable if possible, else hardcode for transparency */
+        backdrop-filter: none;
+        /* Remove blur to see canvas */
+        border-top: 1px solid var(--accent-primary);
     }
 
     .game-players-list {
