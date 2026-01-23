@@ -1314,20 +1314,8 @@ function startRound() {
         return;
     }
 
-    // Random drawer selection - prevent same player from drawing twice in a row
-    const previousDrawerIndex = state.currentDrawerIndex;
-    let availableIndices = [];
-
-    for (let i = 0; i < state.players.length; i++) {
-        // Exclude the previous drawer (unless only 2 players)
-        if (i !== previousDrawerIndex || state.players.length === 2) {
-            availableIndices.push(i);
-        }
-    }
-
-    // Pick a random player from available indices
-    const randomIndex = Math.floor(Math.random() * availableIndices.length);
-    state.currentDrawerIndex = availableIndices[randomIndex];
+    // Sequential round-robin drawer selection - each player draws in order
+    state.currentDrawerIndex = (state.currentDrawerIndex + 1) % state.players.length;
 
     state.round++;
     state.guessedPlayers = new Set();

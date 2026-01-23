@@ -958,7 +958,7 @@ input[type="text"]:focus {
 }
 
 .player-sidebar h3 {
-    font-size: 0.9rem;
+    font-size: 1rem;
     color: var(--text-secondary);
     margin-bottom: 12px;
 }
