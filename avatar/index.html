@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Owl Quiz App</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom Font */
+        @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600&display=swap');
+
+        body {
+            font-family: 'Fredoka', sans-serif;
+            background-color: #f3f4f6;
+        }
+
+        /* Smooth transitions for the progress bar and owl movement */
+        .progress-transition {
+            transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1), left 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* Custom scrollbar */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #d1d5db;
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #9ca3af;
+        }
+
+        /* Option selection animation */
+        .option-card {
+            transition: all 0.2s ease;
+        }
+        .option-card:active {
+            transform: scale(0.98);
+        }
+
+        /* Utilities */
+        .hidden-view {
+            display: none;
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen p-4">
+
+    <!-- Mobile-like Container -->
+    <div class="bg-white w-full max-w-md h-[800px] max-h-[90vh] rounded-[2.5rem] shadow-2xl border-4 border-black flex flex-col relative overflow-hidden">
+        
+        <!-- Header Area with Owl & Progress -->
+        <div class="pt-10 pb-4 px-6 bg-slate-50 border-b-2 border-slate-100">
+            
+            <!-- Owl Container (Moves with progress) -->
+            <div class="relative w-full h-24 mb-2">
+                <div id="owl-mascot" class="absolute bottom-0 w-24 h-24 -ml-12 progress-transition z-10" style="left: 0%;">
+                    <!-- Owl Image -->
+                    <!-- NOTE: Ensure the file 'Screenshot 2026-01-30 102804.png' is in the same folder as this HTML file -->
+                    <img src="img.png" 
+                         alt="Owl Mascot" 
+                         class="w-full h-full object-contain drop-shadow-lg"
+                         onerror="this.style.display='none'; this.parentElement.innerHTML='<div class=\'w-full h-full flex items-center justify-center bg-blue-100 rounded-full text-blue-800 font-bold border-2 border-blue-800\'>Owl</div>'">
+                </div>
+            </div>
+
+            <!-- Progress Bar -->
+            <div class="w-full h-6 bg-white border-2 border-black rounded-full overflow-hidden relative">
+                <!-- Fill -->
+                <div id="progress-fill" class="h-full bg-black progress-transition" style="width: 0%;"></div>
+            </div>
+        </div>
+
+        <!-- VIEW 1: Quiz Question Container -->
+        <div id="quiz-view" class="flex-1 p-6 flex flex-col overflow-hidden">
+            <div class="border-4 border-black rounded-xl p-6 h-full flex flex-col bg-white shadow-sm">
+                
+                <!-- Question Number -->
+                <div class="text-gray-400 text-sm font-bold tracking-widest mb-2 uppercase">
+                    Question <span id="q-current">1</span> of <span id="q-total">4</span>
+                </div>
+
+                <!-- Question Text -->
+                <h2 id="question-text" class="text-xl font-bold text-gray-800 mb-6 custom-scrollbar overflow-y-auto max-h-32">
+                    <!-- Text injected by JS -->
+                </h2>
+
+                <!-- Options Grid -->
+                <div id="options-container" class="flex-1 flex flex-col gap-3 overflow-y-auto custom-scrollbar pr-2">
+                    <!-- Options injected by JS -->
+                </div>
+            </div>
+        </div>
+
+        <!-- VIEW 2: Review Container (Hidden Initially) -->
+        <div id="review-view" class="hidden-view flex-1 p-6 flex-col overflow-hidden">
+            <div class="border-4 border-black rounded-xl p-6 h-full flex flex-col bg-white shadow-sm">
+                <h2 class="text-2xl font-bold text-center mb-2">Quiz Results</h2>
+                <div id="score-display" class="text-center text-lg font-medium text-gray-500 mb-6">
+                    <!-- Score injected here -->
+                </div>
+
+                <!-- Review List -->
+                <div id="review-list" class="flex-1 flex flex-col gap-4 overflow-y-auto custom-scrollbar pr-2">
+                    <!-- Review Items injected by JS -->
+                </div>
+
+                <button onclick="restartQuiz()" class="mt-4 w-full bg-black text-white font-bold py-3 rounded-xl hover:bg-gray-800 transition-colors">
+                    Restart Quiz
+                </button>
+            </div>
+        </div>
+
+        <!-- Footer Navigation -->
+        <div id="footer-nav" class="p-6 pt-2 flex justify-between items-center gap-4 bg-white">
+            <button onclick="prevQuestion()" 
+                    class="flex-1 bg-white border-4 border-black text-black font-bold py-3 px-6 rounded-2xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-y-[2px] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:shadow-none active:translate-y-[4px] transition-all disabled:opacity-50 disabled:cursor-not-allowed text-lg"
+                    id="btn-prev">
+                prev
+            </button>
+            
+            <button onclick="nextQuestion()" 
+                    class="flex-1 bg-white border-4 border-black text-black font-bold py-3 px-6 rounded-2xl shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-y-[2px] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:shadow-none active:translate-y-[4px] transition-all disabled:opacity-50 disabled:cursor-not-allowed text-lg"
+                    id="btn-next">
+                next
+            </button>
+        </div>
+
+    </div>
+
+    <!-- Logic -->
+    <script>
+        // Quiz Data with 'correct' index (0-3)
+        const questions = [
+            {
+                id: 1,
+                text: "What characterizes the Owl's ability to fly silently?",
+                options: [
+                    "Specialized feathers with serrated edges",
+                    "Very small wingspan relative to body",
+                    "Flying at extremely high altitudes",
+                    "Flapping wings faster than hummingbirds"
+                ],
+                correct: 0
+            },
+            {
+                id: 2,
+                text: "Which continent are owls NOT found on?",
+                options: [
+                    "Asia",
+                    "Australia",
+                    "Antarctica",
+                    "South America"
+                ],
+                correct: 2
+            },
+            {
+                id: 3,
+                text: "What is a group of owls called?",
+                options: [
+                    "A flock",
+                    "A murder",
+                    "A parliament",
+                    "A school"
+                ],
+                correct: 2
+            },
+            {
+                id: 4,
+                text: "How far can an owl rotate its head?",
+                options: [
+                    "90 degrees",
+                    "180 degrees",
+                    "270 degrees",
+                    "360 degrees"
+                ],
+                correct: 2
+            }
+        ];
+
+        // State
+        let currentQuestionIndex = 0;
+        let userAnswers = new Array(questions.length).fill(null); 
+
+        // DOM Elements
+        const owlMascot = document.getElementById('owl-mascot');
+        const progressFill = document.getElementById('progress-fill');
+        
+        // Views
+        const quizView = document.getElementById('quiz-view');
+        const reviewView = document.getElementById('review-view');
+        const footerNav = document.getElementById('footer-nav');
+
+        // Quiz View Elements
+        const questionText = document.getElementById('question-text');
+        const optionsContainer = document.getElementById('options-container');
+        const currentQEl = document.getElementById('q-current');
+        const totalQEl = document.getElementById('q-total');
+        const btnPrev = document.getElementById('btn-prev');
+        const btnNext = document.getElementById('btn-next');
+
+        // Review View Elements
+        const reviewList = document.getElementById('review-list');
+        const scoreDisplay = document.getElementById('score-display');
+
+        // Initialize
+        function init() {
+            totalQEl.textContent = questions.length;
+            renderQuestion();
+            updateProgress();
+        }
+
+        // Render current question
+        function renderQuestion() {
+            const q = questions[currentQuestionIndex];
+            
+            currentQEl.textContent = currentQuestionIndex + 1;
+            questionText.textContent = q.text;
+            optionsContainer.innerHTML = '';
+
+            q.options.forEach((opt, index) => {
+                const btn = document.createElement('button');
+                const isSelected = userAnswers[currentQuestionIndex] === index;
+                
+                btn.className = `option-card w-full text-left p-4 border-2 rounded-xl text-lg font-medium transition-all ${
+                    isSelected 
+                    ? 'bg-black text-white border-black shadow-md' 
+                    : 'bg-gray-50 text-gray-700 border-gray-200 hover:border-black hover:bg-gray-100'
+                }`;
+                
+                btn.innerHTML = `<span class="mr-3 font-bold ${isSelected ? 'text-white' : 'text-gray-400'}">${String.fromCharCode(65 + index)}.</span> ${opt}`;
+                
+                btn.onclick = () => selectAnswer(index);
+                optionsContainer.appendChild(btn);
+            });
+
+            btnPrev.disabled = currentQuestionIndex === 0;
+            
+            if (currentQuestionIndex === questions.length - 1) {
+                btnNext.textContent = "finish";
+            } else {
+                btnNext.textContent = "next";
+            }
+        }
+
+        function selectAnswer(optionIndex) {
+            userAnswers[currentQuestionIndex] = optionIndex;
+            renderQuestion();
+            updateProgress();
+        }
+
+        function updateProgress() {
+            const progressPercent = ((currentQuestionIndex + 1) / questions.length) * 100;
+            progressFill.style.width = `${progressPercent}%`;
+            owlMascot.style.left = `${progressPercent}%`;
+        }
+
+        function nextQuestion() {
+            // Validate if an answer is selected (Optional: user can skip? Let's assume they must answer)
+            if (userAnswers[currentQuestionIndex] === null) {
+                // If you want to force an answer, uncomment below:
+                // alert("Please select an answer!"); return;
+            }
+
+            if (currentQuestionIndex < questions.length - 1) {
+                currentQuestionIndex++;
+                renderQuestion();
+                updateProgress();
+            } else {
+                showReview();
+            }
+        }
+
+        function prevQuestion() {
+            if (currentQuestionIndex > 0) {
+                currentQuestionIndex--;
+                renderQuestion();
+                updateProgress();
+            }
+        }
+
+        // --- Review Logic ---
+
+        function showReview() {
+            // Hide Quiz View, Show Review View
+            quizView.style.display = 'none';
+            footerNav.style.display = 'none'; // Hide nav buttons during review
+            reviewView.style.display = 'flex'; // Use flex to match layout
+
+            // Calculate Score
+            let correctCount = 0;
+            userAnswers.forEach((ans, idx) => {
+                if (ans === questions[idx].correct) correctCount++;
+            });
+
+            scoreDisplay.textContent = `You scored ${correctCount} out of ${questions.length}`;
+
+            // Populate Review List
+            reviewList.innerHTML = '';
+            
+            questions.forEach((q, idx) => {
+                const userAns = userAnswers[idx];
+                const isCorrect = userAns === q.correct;
+                
+                const card = document.createElement('div');
+                card.className = "bg-gray-50 p-4 rounded-xl border-2 border-gray-100";
+                
+                let feedbackHTML = '';
+                
+                if (isCorrect) {
+                    feedbackHTML = `
+                        <div class="mt-2 text-green-600 font-bold flex items-center gap-2">
+                            <span>✓</span> Your Answer: ${q.options[userAns]}
+                        </div>
+                    `;
+                } else {
+                    const wrongText = userAns !== null ? q.options[userAns] : "No Answer";
+                    feedbackHTML = `
+                        <div class="mt-2 text-red-500 font-bold flex items-center gap-2">
+                            <span>✗</span> Your Answer: ${wrongText}
+                        </div>
+                        <div class="mt-1 text-green-600 font-bold flex items-center gap-2">
+                            <span>✓</span> Correct: ${q.options[q.correct]}
+                        </div>
+                    `;
+                }
+
+                card.innerHTML = `
+                    <p class="font-bold text-gray-800 mb-1">${idx + 1}. ${q.text}</p>
+                    ${feedbackHTML}
+                `;
+                reviewList.appendChild(card);
+            });
+        }
+
+        function restartQuiz() {
+            currentQuestionIndex = 0;
+            userAnswers.fill(null);
+            
+            // Reset View
+            reviewView.style.display = 'none';
+            quizView.style.display = 'flex'; // Restore flex
+            footerNav.style.display = 'flex'; // Restore flex
+            
+            renderQuestion();
+            updateProgress();
+        }
+
+        init();
+
+    </script>
+</body>
+</html>
